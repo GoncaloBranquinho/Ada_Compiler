@@ -95,11 +95,6 @@ data Token = IF
            | NUM Int
            | REAL Double
     deriving (Eq, Show)
-
-main = do
-    s <- getContents
-    print (alexScanTokens s)
-
 }
 
 
