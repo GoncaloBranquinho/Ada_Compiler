@@ -24,7 +24,6 @@ while                             { \s -> WHILE }
 and                               { \s -> AND } 
 or                                { \s -> OR }
 xor                               { \s -> XOR }
-not $white+ in                    { \s -> NOT_IN }
 not                               { \s -> NOT }
 in                                { \s -> IN }
 
@@ -65,12 +64,42 @@ $digit+"."$digit+                 { \s -> REAL (read s) }
 
 
 {
-  data Token
-      = IF | THEN | ELSE | WHILE
-      | AND | OR | XOR | NOT_IN | NOT | IN
-      | EQUAL | NOT_EQUAL | LESS | LESS_EQUAL | GREATER | GREATER_EQUAL
-      | CONCAT | ASSIGN | LPAREN | RPAREN
-      | PLUS | SUB | POW | MULT | DIV | ABS | MOD | REM
-      | ID String | NUM Int | REAL Double
-      deriving (Eq, Show)
+data Token = IF
+           | THEN
+           | ELSE
+           | WHILE
+           | AND
+           | OR
+           | XOR
+           | NOT
+           | IN
+           | EQUAL
+           | NOT_EQUAL
+           | LESS
+           | LESS_EQUAL
+           | GREATER
+           | GREATER_EQUAL
+           | CONCAT
+           | ASSIGN
+           | LPAREN
+           | RPAREN
+           | PLUS
+           | SUB
+           | POW
+           | MULT
+           | DIV
+           | ABS
+           | MOD 
+           | REM
+           | ID String
+           | NUM Int
+           | REAL Double
+    deriving (Eq, Show)
+
+main = do
+    s <- getContents
+    print (alexScanTokens s)
+
 }
+
+
