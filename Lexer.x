@@ -11,51 +11,51 @@ $alpha = [a-zA-Z]
 
 tokens :- 
 
-$white+                     ;
-Main                        { \s -> MAIN }
-Put_Line                    { \s -> PUTL }
-Get_Line                    { \s -> GETL }
-Integer                     { \s -> INT }
-Boolean                     { \s -> BOOL }
-Float                       { \s -> FLOAT }
-String                      { \s -> STRING }
-procedure                   { \s -> PROC }
-begin                       { \s -> BEGIN }
-end                         { \s -> END }
-is                          { \s -> IS }
-if                          { \s -> IF }
-then                        { \s -> THEN }
-else                        { \s -> ELSE }
-while                       { \s -> WHILE }
-loop                        { \s -> LOOP }
-True                        { \s -> TRUE }
-False                       { \s -> FALSE }
-and                         { \s -> AND } 
-or                          { \s -> OR }
-xor                         { \s -> XOR }
-not                         { \s -> NOT }
-"="                         { \s -> EQUAL }
-"/="                        { \s -> NOT_EQUAL }
-"<"                         { \s -> LESS }
-"<="                        { \s -> LESS_EQ }
-">"                         { \s -> GREAT }
-">="                        { \s -> GREAT_EQ }
-"&"                         { \s -> CONCAT }
-":="                        { \s -> ASSIGN }
-"("                         { \s -> LPAREN }
-")"                         { \s -> RPAREN }
-":"                         { \s -> COLON }
-";"                         { \s -> SEMI }
-","                         { \s -> COMMA }
-"+"                         { \s -> PLUS }
-"-"                         { \s -> SUB }
-"**"                        { \s -> POW }
-"*"                         { \s -> MULT }
-"/"                         { \s -> DIV }
-\"[^\"]*\"                  { \s -> STRING_LITERAL (removerAspas s) }
-$alpha($alpha|$digit|"_")*  { \s -> ID (map toLower s) }
-$digit+"."$digit+           { \s -> FLOAT_LITERAL (read s) }
-$digit+                     { \s -> INTEGER_LITERAL (read s) }
+$white+                                    ;
+Main                                       { \s -> MAIN }
+Put_Line                                   { \s -> PUTL }
+Get_Line                                   { \s -> GETL }
+Integer                                    { \s -> INT }
+Boolean                                    { \s -> BOOL }
+Float                                      { \s -> FLOAT }
+String                                     { \s -> STRING }
+procedure                                  { \s -> PROC }
+begin                                      { \s -> BEGIN }
+end                                        { \s -> END }
+is                                         { \s -> IS }
+if                                         { \s -> IF }
+then                                       { \s -> THEN }
+else                                       { \s -> ELSE }
+while                                      { \s -> WHILE }
+loop                                       { \s -> LOOP }
+True                                       { \s -> TRUE }
+False                                      { \s -> FALSE }
+and                                        { \s -> AND } 
+or                                         { \s -> OR }
+xor                                        { \s -> XOR }
+not                                        { \s -> NOT }
+"="                                        { \s -> EQUAL }
+"/="                                       { \s -> NOT_EQUAL }
+"<"                                        { \s -> LESS }
+"<="                                       { \s -> LESS_EQ }
+">"                                        { \s -> GREAT }
+">="                                       { \s -> GREAT_EQ }
+"&"                                        { \s -> CONCAT }
+":="                                       { \s -> ASSIGN }
+"("                                        { \s -> LPAREN }
+")"                                        { \s -> RPAREN }
+":"                                        { \s -> COLON }
+";"                                        { \s -> SEMI }
+","                                        { \s -> COMMA }
+"+"                                        { \s -> PLUS }
+"-"                                        { \s -> SUB }
+"**"                                       { \s -> POW }
+"*"                                        { \s -> MULT }
+"/"                                        { \s -> DIV }
+\"[^\"]*\"                                 { \s -> STRING_LITERAL (removerAspas s) }
+$alpha($alpha|$digit|"_"($alpha|$digit))*  { \s -> ID (map toLower s) }
+$digit+"."$digit+                          { \s -> FLOAT_LITERAL (read s) }
+$digit+                                    { \s -> INTEGER_LITERAL (read s) }
 
 {
 
