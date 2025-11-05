@@ -12,13 +12,13 @@ $alpha = [a-zA-Z]
 tokens :- 
 
 $white+                                    ;
-Main                                       { \s -> MAIN }
-Put_Line                                   { \s -> PUTL }
-Get_Line                                   { \s -> GETL }
-Integer                                    { \s -> INT }
-Boolean                                    { \s -> BOOL }
-Float                                      { \s -> FLOAT }
-String                                     { \s -> STRING }
+main                                       { \s -> MAIN }
+put_line                                   { \s -> PUTL }
+get_line                                   { \s -> GETL }
+integer                                    { \s -> INT }
+boolean                                    { \s -> BOOL }
+float                                      { \s -> FLOAT }
+string                                     { \s -> STRING }
 procedure                                  { \s -> PROC }
 begin                                      { \s -> BEGIN }
 end                                        { \s -> END }
@@ -28,8 +28,8 @@ then                                       { \s -> THEN }
 else                                       { \s -> ELSE }
 while                                      { \s -> WHILE }
 loop                                       { \s -> LOOP }
-True                                       { \s -> TRUE }
-False                                      { \s -> FALSE }
+true                                       { \s -> TRUE }
+false                                      { \s -> FALSE }
 and                                        { \s -> AND } 
 or                                         { \s -> OR }
 xor                                        { \s -> XOR }
@@ -53,7 +53,7 @@ not                                        { \s -> NOT }
 "*"                                        { \s -> MULT }
 "/"                                        { \s -> DIV }
 \"[^\"]*\"                                 { \s -> STRING_LITERAL (removerAspas s) }
-$alpha($alpha|$digit|"_"($alpha|$digit))*  { \s -> ID (map toLower s) }
+$alpha($alpha|$digit|"_"($alpha|$digit))*  { \s -> ID s }
 $digit+"."$digit+                          { \s -> FLOAT_LITERAL (read s) }
 $digit+                                    { \s -> INTEGER_LITERAL (read s) }
 
@@ -109,5 +109,8 @@ data Token = MAIN
            | INTEGER_LITERAL Int
            | FLOAT_LITERAL Double
     deriving (Eq, Show)
+
+alexScanTokensInsensitive :: String -> [Token]
+alexScanTokensInsensitive = alexScanTokens . map toLower
 
 }
