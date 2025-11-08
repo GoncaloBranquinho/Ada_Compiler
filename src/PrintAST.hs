@@ -1,6 +1,6 @@
 module PrintAST where
 
-import Parser -- para ter acesso aos tipos Prog, Decl, Exec, Exp
+import Parser 
 
 indent :: Int -> String
 indent n = replicate (n * 4) ' '
@@ -22,7 +22,7 @@ prettyDecl n decl = case decl of
   DeclNonInit (DeclVarLast v) t -> indent n ++ "DeclNonInit\n" ++ indent (n+1) ++ "DeclVarLast \"" ++ v ++ "\"\n"
                                   ++ indent (n+1) ++ show t ++ "\n"
   EmptyDecl -> indent n ++ "EmptyDecl\n"
-  _ -> indent n ++ "Decl (complex pattern)\n" -- simplificação para outros casos se houver
+  _ -> indent n ++ "Decl (complex pattern)\n" 
 
 prettyExec :: Int -> Exec -> String
 prettyExec n exec = case exec of
