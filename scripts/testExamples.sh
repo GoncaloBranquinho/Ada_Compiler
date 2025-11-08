@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd ../src
+cd src
 make clean >/dev/null 2>&1
 make build
 cd ../scripts/
