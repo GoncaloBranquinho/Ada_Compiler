@@ -4,4 +4,4 @@ bin/
 Lexer.hs
 parser
 Parser.hs
-
+*.txt
