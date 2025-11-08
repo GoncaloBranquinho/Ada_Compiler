@@ -1,0 +1,18 @@
+Prog
+    DeclComp
+        DeclInit
+            DeclVarLast "x"
+            TypeInteger
+            IntLit 10
+        DeclNonInit
+            DeclVarLast "y"
+            TypeInteger
+    ExecComp
+        Assign
+            "y"
+            Add
+                Var "x"
+                IntLit 5
+        PutLine
+            Var "y"
+

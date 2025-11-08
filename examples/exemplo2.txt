@@ -1,0 +1,20 @@
+Prog
+    DeclInit
+        DeclVarLast "score"
+        TypeInteger
+        IntLit 75
+    IfThenElse
+        Le
+            IntLit 60
+            Var "score"
+        PutLine
+            StringLit "aprovado"
+        IfThenElse
+            Le
+                IntLit 50
+                Var "score"
+            PutLine
+                StringLit "suficiente"
+            PutLine
+                StringLit "reprovado"
+

@@ -3,6 +3,7 @@ module Main where
 import System.Environment (getArgs)
 import Lexer
 import Parser
+import PrintAST (printAST)
 
 main :: IO ()
 main = do
@@ -10,5 +11,5 @@ main = do
     case args of
         [txt] -> do
             input <- readFile txt
-            print (parse $ alexScanTokensInsensitive input)
+            printAST $ parse $ alexScanTokensInsensitive input
 

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -fno-warn-unused-binds -fno-warn-missing-signatures #-}
 {-# LANGUAGE CPP #-}
-{-# LINE 1 "Lexer.x" #-}
+{-# LINE 1 "src/Lexer.x" #-}
 module Lexer where
 import Data.Char
 #if __GLASGOW_HASKELL__ >= 603
@@ -18219,7 +18219,7 @@ alexRightContext IBOX(sc) user__ _ _ input__ =
         -- match when checking the right context, just
         -- the first match will do.
 #endif
-{-# LINE 60 "Lexer.x" #-}
+{-# LINE 60 "src/Lexer.x" #-}
 removerAspas :: String -> String
 removerAspas ('"':[]) = []
 removerAspas ('"':xs) = removerAspas xs
