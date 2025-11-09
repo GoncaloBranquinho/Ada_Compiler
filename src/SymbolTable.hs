@@ -52,24 +52,24 @@ buildSTProg (Prog d e) = buildSTDecl d >>= \t0 -> buildSTExec e >>= \t1 -> retur
 buildSTDecl :: Decl -> State SymTabState SymTabState
 buildSTDecl (DeclInit dv t exp) = buildSTDeclVar dv t' >>= \t0 -> return t0
     where t' = convertType t
-buildSTDecl (DeclNonInit dv t) = buildSTDeclVar dv t' >>= \t0 -> return t0
+buildSTDecl (DeclNonInit dv t)  = buildSTDeclVar dv t' >>= \t0 -> return t0
     where t' = convertType t
-buildSTDecl (DeclComp d1 d2) = buildSTDecl d1 >>= \t0 -> buildSTDecl d2 >>= \t1 -> return t1
-buildSTDecl (EmptyDecl) = get >>= \t0 -> return t0
+buildSTDecl (DeclComp d1 d2)    = buildSTDecl d1 >>= \t0 -> buildSTDecl d2 >>= \t1 -> return t1
+buildSTDecl (EmptyDecl)         = get >>= \t0 -> return t0
 
 buildSTDeclVar :: DeclVar -> TypeST -> State SymTabState SymTabState
 buildSTDeclVar (DeclVarNonLast dv s) t = get >>= \t0 -> bindST s t >>= \t1 -> buildSTDeclVar dv t >>= \t2 -> return t2
-buildSTDeclVar (DeclVarLast s) t = get >>= \t0 -> bindST s t >>= \t1 -> return t1
+buildSTDeclVar (DeclVarLast s) t       = get >>= \t0 -> bindST s t >>= \t1 -> return t1
 
 buildSTExec :: Exec -> State SymTabState SymTabState
-buildSTExec (Assign s exp) = get >>= \t0 -> return t0
+buildSTExec (Assign s exp)         = get >>= \t0 -> return t0
 buildSTExec (IfThenElse exp e1 e2) = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
-buildSTExec (WhileLoop exp e) = buildSTExec e >>= \t0 -> return t0
-buildSTExec (PutLine exp) = get >>= \t0 -> return t0
-buildSTExec (GetLine s exp) = get >>= \t0 -> return t0
-buildSTExec (ExecComp e1 e2) = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
-buildSTExec (DeclBlock d e) = enterScopeST >>= \t0 -> buildSTDecl d >>= \t1 -> buildSTExec e >>= \t2 -> exitScopeST >>= \t3 -> return t3
-buildSTExec (EmptyExec) = get >>= \t0 -> return t0
+buildSTExec (WhileLoop exp e)      = buildSTExec e >>= \t0 -> return t0
+buildSTExec (PutLine exp)          = get >>= \t0 -> return t0
+buildSTExec (GetLine s exp)        = get >>= \t0 -> return t0
+buildSTExec (ExecComp e1 e2)       = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
+buildSTExec (DeclBlock d e)        = enterScopeST >>= \t0 -> buildSTDecl d >>= \t1 -> buildSTExec e >>= \t2 -> exitScopeST >>= \t3 -> return t3
+buildSTExec (EmptyExec)            = get >>= \t0 -> return t0
 
 type Code = String
 
@@ -80,7 +80,7 @@ getSymTab :: Code -> SymTab
 getSymTab c = fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive c) emptyST
 
 lookUpSymTab :: Name -> SymTab -> Maybe TypeST
-lookUpSymTab n [] = Just TypeErrorST
+lookUpSymTab n []                  = Just TypeErrorST
 lookUpSymTab n (x:xs) | n /= fst x = lookUpSymTab n xs
                       | otherwise  = Just (snd x)
 
