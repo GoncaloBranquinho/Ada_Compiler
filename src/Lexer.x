@@ -28,6 +28,7 @@ then                                       { \s -> THEN }
 else                                       { \s -> ELSE }
 while                                      { \s -> WHILE }
 loop                                       { \s -> LOOP }
+declare                                    { \s -> DECLARE }
 true                                       { \s -> TRUE }
 false                                      { \s -> FALSE }
 and                                        { \s -> AND } 
@@ -80,6 +81,7 @@ data Token = MAIN
            | ELSE
            | WHILE
            | LOOP
+           | DECLARE
            | TRUE
            | FALSE
            | AND

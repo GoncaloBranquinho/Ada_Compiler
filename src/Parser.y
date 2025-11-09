@@ -24,6 +24,7 @@ import Lexer
       else        { ELSE }
       while       { WHILE }
       loop        { LOOP }
+      declare     { DECLARE }
       true        { TRUE }
       false       { FALSE }
       and         { AND }
@@ -88,15 +89,18 @@ Exec : IfThenElse { $1 }
      | Assign     { $1 }
      | WhileLoop  { $1 }
      | IO         { $1 }
+     | DeclBlock  { $1 }
 
 IfThenElse : if Exp then ExecCompStart else ExecCompStart end if { IfThenElse $2 $4 $6 }
 
 Assign : id ":=" Exp { Assign $1 $3 }
 
-WhileLoop : while Exp loop ExecCompStart end loop { While $2 $4 }
+WhileLoop : while Exp loop ExecCompStart end loop { WhileLoop $2 $4 }
 
 IO : put_line "(" Exp ")"        { PutLine $3 }
    | get_line "(" id "," Exp ")" { GetLine $3 $5 }
+
+DeclBlock : declare DeclCompStart begin ExecCompStart end { DeclBlock $2 $4 }
 
 Exp        : OrExp { $1 }
 
@@ -152,24 +156,25 @@ data Decl = DeclInit DeclVar Type Exp
           | DeclNonInit DeclVar Type
           | DeclComp Decl Decl
           | EmptyDecl
-    deriving Show
+    deriving (Show, Eq)
 
 data DeclVar = DeclVarNonLast DeclVar String
              | DeclVarLast String
-    deriving Show
+    deriving (Show, Eq)
 
 data Type = TypeInteger
           | TypeBoolean
           | TypeFloat 
           | TypeString
-    deriving Show
+    deriving (Show, Eq)
 
 data Exec = Assign String Exp
           | IfThenElse Exp Exec Exec
-          | While Exp Exec
+          | WhileLoop Exp Exec
           | PutLine Exp
           | GetLine String Exp
           | ExecComp Exec Exec
+          | DeclBlock Decl Exec
           | EmptyExec
     deriving (Show, Eq)
 
