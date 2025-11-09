@@ -90,6 +90,8 @@ removeJustType (Just t) = t
 nameToTypeST :: Name -> Code -> TypeST
 nameToTypeST n c = removeJustType $ (lookUpSymTab n) $ getSymTab c
 
+-- esta função main serve para testar no GHCi
+
 {--
 main :: IO ()
 main = do
