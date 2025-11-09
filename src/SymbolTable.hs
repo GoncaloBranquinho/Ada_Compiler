@@ -97,12 +97,3 @@ main = do
     print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive code) emptyST
 --}
 
-{--
-main :: IO ()
-main = do
-    args <- getArgs
-    case args of
-        [txt] -> do
-            input <- readFile txt
-            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
---}
