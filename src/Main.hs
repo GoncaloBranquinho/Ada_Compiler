@@ -1,4 +1,4 @@
-module Main where
+tymodule Main where
 
 import System.Environment (getArgs)
 import Lexer
@@ -19,11 +19,11 @@ main = do
             
         [txt, "1"] -> do
             input <- readFile txt
-            print $ fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) initST
+            print $ fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
 
         [txt, "2"] -> do
             input <- readFile txt
-            let scopes = snd $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) initST
+            let scopes = snd $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
                 size = length scopes
             putStrLn $ "A quantidade de âmbitos é (escolha um número de 0 a até ao total de âmbitos - 1, caso contrário mostra todos): " ++ show size
             optStr <- getLine
@@ -32,6 +32,6 @@ main = do
 
         [txt, "3"] -> do
             input <- readFile txt
-            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) initST
+            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
 
         
