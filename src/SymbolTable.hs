@@ -31,8 +31,8 @@ type SymTab = [(Name, TypeST)]
 type ScopeMem = ([SymTab], [SymTab])
 type SymTabState = (SymTab, ScopeMem)
 
-initST :: SymTabState
-initST = ([], ([], []))
+emptyST :: SymTabState
+emptyST = ([], ([], []))
 
 bindST :: Name -> TypeST -> State SymTabState SymTabState
 bindST n t = state (\s -> let (x, xs, ys) = ((n, t), fst s, snd s) in ((x:xs, ys), (x:xs, ys)))
@@ -77,7 +77,7 @@ example :: Code
 example = "procedure Main is x : Integer := 1; begin x := 2; end Main;"
 
 getSymTab :: Code -> SymTab
-getSymTab c = fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive c) initST
+getSymTab c = fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive c) emptyST
 
 lookUpSymTab :: Name -> SymTab -> Maybe TypeST
 lookUpSymTab n [] = Just TypeErrorST
@@ -94,7 +94,7 @@ nameToTypeST n c = removeJustType $ (lookUpSymTab n) $ getSymTab c
 main :: IO ()
 main = do
     code <- getLine
-    print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive code) initST
+    print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive code) emptyST
 --}
 
 {--
@@ -104,5 +104,5 @@ main = do
     case args of
         [txt] -> do
             input <- readFile txt
-            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) initST
+            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
 --}
