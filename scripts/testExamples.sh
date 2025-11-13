@@ -1,4 +1,5 @@
 #!/bin/sh
+# Credit to Denellyne (Gustavo dos Santos) https://github.com/Denellyne
 
 cd src
 make clean >/dev/null 2>&1
