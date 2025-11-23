@@ -12,6 +12,16 @@ import System.Environment (getArgs)
    more precisely, it's the first time I use a Monad explicitly)
 --}
 
+{--
+   There's at least one change that is yet to be done: we need add implicit conversion for
+   when a Float and an Integer operate with one another, for example during the assignment or
+   arithmetic operations. This can be done via the inclusion of a new argument for the typeCheck
+   function, with the purpose of it being the expected type of the operation, which would force
+   all Integers to implicitly convert into Floats.
+
+   We should also try to create type error texts, by adding a String type to the TypeErrorST.
+--}
+
 data TypeST = TypeIntegerST
             | TypeBooleanST
             | TypeFloatST
