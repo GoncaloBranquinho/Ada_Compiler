@@ -92,6 +92,7 @@ lookUpSymTab n (x:xs) | n /= fst x = lookUpSymTab n xs
 
 removeJustType :: Maybe TypeST -> TypeST
 removeJustType (Just t) = t
+removeJustType Nothing = TypeErrorST
 
 nameToTypeST :: Name -> Code -> TypeST
 nameToTypeST n c = removeJustType $ (lookUpSymTab n) $ getSymTab c
