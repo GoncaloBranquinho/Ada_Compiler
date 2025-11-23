@@ -14,7 +14,7 @@ for filename in ../examples/*.adb; do
   txtfile="${filename%.*}.txt"
   tablefile="${filename%.*}Table.txt"
   
-  if ../src/bin/ada "$filename" 3 > "$txtfile" 2>&1 && ../src/bin/ada "$filename" 3 > "${filename%.*}Table.txt" 2>&1; then
+  if ../src/bin/ada "$filename" > "$txtfile" 2>&1 && ../src/bin/ada "$filename" 3 > "${filename%.*}Table.txt" 2>&1; then
     echo -e "\033[0;32m$filename Success\033[0m"
     successes=$((successes + 1))
   else
