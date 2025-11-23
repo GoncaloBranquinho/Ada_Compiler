@@ -9,7 +9,6 @@ Lexer.hs: Lexer.x
 Parser.hs: Parser.y
 	happy Parser.y
 
-# Regras
 all: build
 
 build: $(EXEC)
