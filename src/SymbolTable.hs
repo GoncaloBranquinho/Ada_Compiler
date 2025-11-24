@@ -82,7 +82,7 @@ buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> typeCheck exp >>= \t1 -> upda
 buildSTExec (IfThenElse exp e1 e2) = typeCheck exp >>= \t0 -> updateErrorTableST exp t0 TypeBooleanST >>= \t1 -> buildSTExec e1 >>= \t2 -> buildSTExec e2 >>= \t3 -> return t3
 buildSTExec (WhileLoop exp e) = typeCheck exp >>= \t0 -> updateErrorTableST exp t0 TypeBooleanST >>= \t1 -> buildSTExec e >>= \t2 -> return t2
 buildSTExec (PutLine exp) = typeCheck exp >>= \t0 -> updateErrorTableST exp t0 TypeStringST >>= \t1 -> return t1
-buildSTExec (GetLine s exp) = typeCheck exp >>= \t0 -> updateErrorTableST exp t0 TypeIntegerST >>= \t1 -> return t1
+buildSTExec (GetLine n exp) = typeCheck exp >>= \t0 -> updateErrorTableST exp t0 TypeIntegerST >>= \t1 -> typeCheck n >>= \t2 -> updateErrorTableST n t2 TypeStringST >>= \t3 -> return t3
 buildSTExec (ExecComp e1 e2) = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
 buildSTExec (DeclBlock d e) = enterScopeST >>= \t0 -> buildSTDecl d >>= \t1 -> buildSTExec e >>= \t2 -> exitScopeST >>= \t3 -> return t3
 buildSTExec (EmptyExec) = get >>= \t0 -> return t0
