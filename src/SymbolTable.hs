@@ -133,7 +133,7 @@ typeCheck (Concat e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> retur
 typeCheck (Not e1) = typeCheck e1 >>= \t0 -> return (if (t0 == TypeBooleanST) then TypeBooleanST else TypeErrorST)
 
 
--- esta função main serve para testar no GHCi
+-- This main function can be used for debugging - or experimenting with - this program on GHCi (it's the acronym for Haskell's interpreter, for those unaware).
 
 {--
 main :: IO ()d
