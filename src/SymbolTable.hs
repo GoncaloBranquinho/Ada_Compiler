@@ -12,6 +12,8 @@ import System.Environment (getArgs)
    more precisely, it's the first time I use a Monad explicitly)
 --}
 
+-- TBD (the comment below)
+
 {--
    There's at least one change that is yet to be done: we need add implicit conversion for
    when a Float and an Integer operate with one another, for example during the assignment or
@@ -26,7 +28,7 @@ data TypeST = TypeIntegerST
             | TypeBooleanST
             | TypeFloatST
             | TypeStringST
-            | TypeErrorST -- só serve para mostrar que não existe nas funções de lookUp (exceto a lookUpST, que atua durante a criação da tabela - atualmente não tem utilidade)
+            | TypeErrorST
     deriving (Show, Eq)
 
 convertType :: Type -> TypeST
