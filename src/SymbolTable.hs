@@ -58,7 +58,7 @@ exitScopeST :: State SymTabState SymTabState
 exitScopeST = state (\s -> ((head $ snd $ snd $ snd s, (fst $ snd s, (fst s:(fst $ snd $ snd s), tail $ snd $ snd $ snd s))), ((head $ snd $ snd $ snd s, (fst $ snd s, (fst s:(fst $ snd $ snd s), tail $ snd $ snd $ snd s))))))
 
 lookUpST :: Name -> State SymTabState TypeST
-lookUpST n = state (\s -> (removeJustType $ lookup n (fst s), s))
+lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))
 
 updateErrorTableST :: Exp -> TypeST -> TypeST -> State SymTabState SymTabState
 updateErrorTableST exp t1 t2 | t1 /= t2 = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
@@ -99,7 +99,7 @@ getSymTab c = fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive c
 
 lookUpSymTab :: Name -> SymTab -> Maybe TypeST
 lookUpSymTab n [] = Just TypeErrorST
-lookUpSymTab n (x:xs) | n /= fst x = lookUpSymTab n xs
+lookUpSymTab n (x:xs) | n /= ((takeWhile (\x0 -> x0 /= '@')) $ fst x) = lookUpSymTab n xs
                       | otherwise  = Just (snd x)
 
 removeJustType :: Maybe TypeST -> TypeST
