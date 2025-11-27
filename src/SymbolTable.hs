@@ -39,7 +39,7 @@ convertType t | t == TypeInteger = TypeIntegerST
               | otherwise        = TypeErrorST
 
 type Name = String
-type SymTab = [(Name, TypeST]
+type SymTab = [(Name, TypeST)]
 type ScopeMem = ([SymTab], [SymTab])
 type ErrorList = [(Exp, TypeST, TypeST)]
 type SymTabState = (SymTab, (ErrorList, ScopeMem))
