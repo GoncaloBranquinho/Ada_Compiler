@@ -98,7 +98,7 @@ Assign : id ":=" Exp { Assign $1 $3 }
 WhileLoop : while Exp loop ExecCompStart end loop { WhileLoop $2 $4 }
 
 IO : put_line "(" Exp ")"        { PutLine $3 }
-   | get_line "(" id "," Exp ")" { GetLine $3 $5 }
+   | get_line "(" id "," id ")"  { GetLine $3 $5 }
 
 DeclBlock : declare DeclCompStart begin ExecCompStart end { DeclBlock $2 $4 }
 
@@ -172,7 +172,7 @@ data Exec = Assign String Exp
           | IfThenElse Exp Exec Exec
           | WhileLoop Exp Exec
           | PutLine Exp
-          | GetLine String Exp
+          | GetLine String String
           | ExecComp Exec Exec
           | DeclBlock Decl Exec
           | EmptyExec

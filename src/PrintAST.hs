@@ -31,7 +31,7 @@ prettyExec n exec = case exec of
   IfThenElse c t e -> indent n ++ "IfThenElse\n" ++ prettyExpr (n+1) c ++ prettyExec (n+1) t ++ prettyExec (n+1) e
   WhileLoop c b -> indent n ++ "While\n" ++ prettyExpr (n+1) c ++ prettyExec (n+1) b
   PutLine e -> indent n ++ "PutLine\n" ++ prettyExpr (n+1) e
-  GetLine v e -> indent n ++ "GetLine\n" ++ indent (n+1) ++ show v ++ "\n" ++ prettyExpr (n+1) e
+  GetLine v1 v2 -> indent n ++ "GetLine\n" ++ indent (n+1) ++ show v1 ++ "\n" ++ show v2
   DeclBlock decl exec -> indent n ++ "DeclBlock\n" ++ prettyDecl (n+1) decl ++ prettyExec (n+1) exec
   EmptyExec -> indent n ++ "EmptyExec\n"
 
