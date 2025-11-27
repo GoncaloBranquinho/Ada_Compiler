@@ -39,7 +39,7 @@ convertType t | t == TypeInteger = TypeIntegerST
               | otherwise        = TypeErrorST
 
 type Name = String
-type SymTab = [(Name, TypeST)]
+type SymTab = [(Name, TypeST]
 type ScopeMem = ([SymTab], [SymTab])
 type ErrorList = [(Exp, TypeST, TypeST)]
 type SymTabState = (SymTab, (ErrorList, ScopeMem))
@@ -49,7 +49,7 @@ emptyST :: SymTabState
 emptyST = ([], ([], ([], [])))
 
 bindST :: Name -> TypeST -> State SymTabState SymTabState
-bindST n t = state (\s -> let (x, xs, ys) = ((n, t), fst s, snd s) in ((x:xs, ys), (x:xs, ys)))
+bindST n t = state (\s -> let (x, xs, ys) = ((n ++ "@" ++ show ((length $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)), t), fst s, snd s) in ((x:xs, ys), (x:xs, ys)))
 
 enterScopeST :: State SymTabState SymTabState
 enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, fst s:(snd $ snd $ snd s)))), (fst s, (fst $ snd s, (fst $ snd $ snd s, fst s:(snd $ snd $ snd s))))))
