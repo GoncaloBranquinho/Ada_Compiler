@@ -46,6 +46,7 @@ type ErrorString = String
 type ErrorList = [(ErrorString, TypeST, TypeST)]
 type SymTabState = (SymTab, (ErrorList, ScopeMem))
 
+
 emptyST :: SymTabState
 emptyST = ([], ([], ([], ([], ["0"]))))
 
@@ -60,24 +61,6 @@ exitScopeST = state (\s -> ((head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((hea
 
 lookUpST :: Name -> State SymTabState TypeST
 lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))
-
-
-{--
-emptyST :: SymTabState
-emptyST = ([], ([], ([], [])))
-
-bindST :: Name -> TypeST -> State SymTabState SymTabState
-bindST n t = state (\s -> let (x, xs, ys) = ((n ++ "@" ++ (show ((length $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s))), t), fst s, snd s) in ((x:xs, ys), (x:xs, ys)))
-
-enterScopeST :: State SymTabState SymTabState
-enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, fst s:(snd $ snd $ snd s)))), (fst s, (fst $ snd s, (fst $ snd $ snd s, fst s:(snd $ snd $ snd s))))))
-
-exitScopeST :: State SymTabState SymTabState
-exitScopeST = state (\s -> ((head $ snd $ snd $ snd s, (fst $ snd s, ((show ((length $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)), fst s):(fst $ snd $ snd s), tail $ snd $ snd $ snd s))), ((head $ snd $ snd $ snd s, (fst $ snd s, ((show ((length $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)), fst s):(fst $ snd $ snd s), tail $ snd $ snd $ snd s))))))
-
-lookUpST :: Name -> State SymTabState TypeST
-lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))
---}
 
 updateErrorTableST :: ErrorString -> TypeST -> TypeST -> State SymTabState SymTabState
 updateErrorTableST exp t1 t2 | t1 /= t2 = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
