@@ -7,7 +7,12 @@ procedure Main is
             z : Integer := 3;
             begin
                 x := (y + z);
-                Put_Line(x);
+                declare
+                    a : Integer := 1;
+                    b : Integer;
+                    begin
+                    end;
+                Put_Line(y);
             end;
         Put_Line("A resposta pós local é: ");
         Put_Line(x);

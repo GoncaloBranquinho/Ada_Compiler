@@ -7,6 +7,7 @@ import Data.List
 import Control.Monad.State
 import SymbolTable
 import PrintAST (printAST)
+import IntermediateCode (transAST)
 
 main :: IO ()
 main = do
@@ -34,4 +35,7 @@ main = do
             input <- readFile txt
             print $ fst $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
 
-
+        [txt, "5"] -> do 
+            input <- readFile txt 
+            let table = fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
+            mapM_ print $ evalState ((transAST $ parse $ alexScanTokensInsensitive input) table) (0, 0, 0)

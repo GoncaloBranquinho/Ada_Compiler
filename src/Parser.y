@@ -164,7 +164,7 @@ data DeclVar = DeclVarNonLast DeclVar String
 
 data Type = TypeInteger
           | TypeBoolean
-          | TypeFloat 
+          | TypeFloat
           | TypeString
     deriving (Show, Eq)
 
