@@ -40,8 +40,8 @@ convertType t | t == TypeInteger = TypeIntegerST
               | otherwise        = TypeErrorST
 
 type Name = String
-type Assigned = Boolean
-type SymTab = [(Name, TypeST, Assigned)]
+type Assigned = Bool
+type SymTab = [(Name, (TypeST, Assigned))]
 type ScopeID = String
 type ScopeMem = ([(ScopeID, SymTab)], ([SymTab], [ScopeID]))
 type ErrorString = String
@@ -52,7 +52,7 @@ type SymTabState = (SymTab, (ErrorList, ScopeMem))
 emptyST :: SymTabState
 emptyST = ([], ([], ([], ([], ["0"]))))
 
-bindST :: Name -> TypeST -> Boolean -> State SymTabState SymTabState
+bindST :: Name -> TypeST -> Assigned -> State SymTabState SymTabState
 bindST n t a = state (\s -> let (x, xs, ys) = ((n ++ "@" ++ (head $ snd $ snd $ snd $ snd s), (t, a)), fst s, snd s) in ((x:xs, ys), (x:xs, ys)))
 
 enterScopeST :: State SymTabState SymTabState
@@ -79,12 +79,12 @@ buildSTDecl (DeclNonInit dv t) = buildSTDeclVar dv t' False >>= \t0 -> return t0
 buildSTDecl (DeclComp d1 d2) = buildSTDecl d1 >>= \t0 -> buildSTDecl d2 >>= \t1 -> return t1
 buildSTDecl (EmptyDecl) = get >>= \t0 -> return t0
 
-buildSTDeclVar :: DeclVar -> TypeST -> Boolean -> State SymTabState SymTabState
-buildSTDeclVar (DeclVarNonLast dv s) t a = bindST s t a >>= \t0 -> buildSTDeclVar dv t >>= \t1 -> return t1
+buildSTDeclVar :: DeclVar -> TypeST -> Assigned -> State SymTabState SymTabState
+buildSTDeclVar (DeclVarNonLast dv s) t a = bindST s t a >>= \t0 -> buildSTDeclVar dv t a >>= \t1 -> return t1
 buildSTDeclVar (DeclVarLast s) t a = bindST s t a >>= \t0 -> return t0
 
 buildSTExec :: Exec -> State SymTabState SymTabState
-buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> if (snd t0) then (get) else (bindST n (fst t0) (True)) >>= \t1 (typeCheck exp) >>= \t2 -> updateErrorTableST (show exp) (fst t0) t2 >>= \t3 -> return t3
+buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> if (snd t0) then (get) else (bindST n (fst t0) (True)) >>= \t1 -> typeCheck exp >>= \t2 -> updateErrorTableST (show exp) (fst t0) t2 >>= \t3 -> return t3
 buildSTExec (IfThenElse exp e1 e2) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e1 >>= \t2 -> buildSTExec e2 >>= \t3 -> return t3
 buildSTExec (WhileLoop exp e) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e >>= \t2 -> return t2
 buildSTExec (PutLine exp) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeStringST >>= \t1 -> return t1
@@ -106,9 +106,9 @@ lookUpSymTab n [] = Just (TypeErrorST, False)
 lookUpSymTab n (x:xs) | n /= ((takeWhile (\x0 -> x0 /= '@')) $ fst x) = lookUpSymTab n xs
                       | otherwise  = Just (snd x)
 
-removeJustType :: Maybe TypeST -> (TypeST, Assigned)
+removeJustType :: Maybe (TypeST, Assigned) -> (TypeST, Assigned)
 removeJustType (Just t) = t
-removeJustType Nothing = TypeErrorST
+removeJustType Nothing = (TypeErrorST, False)
 
 nameToTypeST :: Name -> Code -> TypeST
 nameToTypeST n c = fst $ removeJustType $ (lookUpSymTab n) $ getSymTab c
