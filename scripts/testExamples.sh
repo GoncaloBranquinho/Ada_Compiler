@@ -11,7 +11,7 @@ fails=0
 
 for filename in ../examples/*.adb; do
   tests=$((tests + 1)) 
-  txtfile="${filename%.*}.txt"
+  txtfile="${filename%.*}AST.txt"
   tablefile="${filename%.*}Table.txt"
   irfile="${filename%.*}IR.txt"
 

@@ -47,6 +47,11 @@ newTemp = do (temps, labels, scope) <- get
              put (temps+1, labels, scope)
              return ("t" ++ show temps)
 
+popTemp :: Int -> State Count ()
+popTemp n = do (temps, labels, scope) <- get
+               put (temps-n, labels, scope)
+
+
 newLabel :: State Count Label
 newLabel = do (temps,labels, scope) <- get
               put (temps, labels+1, scope)
@@ -60,13 +65,29 @@ getScope :: State Count Int
 getScope = do (_, _, scope) <- get
               return scope
 
+getVarScope :: Temp -> ScopeMem -> State Count Temp
+getVarScope temp (table, _) = do let id = takeWhile (\x -> x /= '@') temp
+                                 let scope = tail (dropWhile (\x -> x /= '@') temp)
+                                 if scope == "0"
+                                     then return temp
+                                     else do newScope <- searchScope id scope table
+                                             return newScope
 
-transAST :: Prog -> SymTab -> State Count [Instr]
+
+searchScope :: String -> String -> [(ScopeID, SymTab)] -> State Count Temp
+searchScope id scope1 ((scope2, table):rest) = if scope1 == scope2 then searchID id table else searchScope id scope1 rest
+
+
+searchID :: String -> SymTab -> State Count Temp
+searchID id1 ((temp,_):rest) = do let id2 = takeWhile (\x -> x /= '@') temp
+                                  if id1 == id2 then return temp else searchID id1 rest
+
+transAST :: Prog -> ScopeMem -> State Count [Instr]
 transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      return (code1 ++ code2)
 
-transDecl :: Decl -> SymTab -> State Count [Instr]
+transDecl :: Decl -> ScopeMem -> State Count [Instr]
 transDecl EmptyDecl table = return []
 transDecl (DeclComp decl1 decl2) table = do code1 <- transDecl decl1 table
                                             code2 <- transDecl decl2 table
@@ -83,7 +104,7 @@ transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            return (concatMap (\v -> [DECL v typString]) idsList)
 
 
-transDeclVar :: DeclVar -> SymTab -> State Count [Temp]
+transDeclVar :: DeclVar -> ScopeMem -> State Count [Temp]
 transDeclVar (DeclVarLast id) table = do scope <- getScope
                                          let dest = id ++ "@" ++ show scope
                                          return [dest]
@@ -93,7 +114,7 @@ transDeclVar (DeclVarNonLast ids id) table = do scope <- getScope
                                                 return ([dest] ++ rest)
 
 
-transCond :: Exp -> SymTab -> Label -> Label -> State Count [Instr]
+transCond :: Exp -> ScopeMem -> Label -> Label -> State Count [Instr]
 transCond TrueLit table labelt labelf = return [JUMP labelt]
 transCond FalseLit table labelt labelf = return [JUMP labelf]
 transCond (Not cond) table labelt labelf = do code1 <- transCond cond table labelf labelt
@@ -132,7 +153,7 @@ transCond (Var id) table labelt labelf = do t1 <- newTemp
                                             code1 <- transExp (Var id) table t1
                                             return (code1 ++ [COND t1 NE "0" labelt labelf])
 
-transExec :: Exec -> SymTab -> State Count [Instr]
+transExec :: Exec -> ScopeMem -> State Count [Instr]
 transExec EmptyExec _ = return []
 transExec (DeclBlock decl exec) table = do newScope
                                            code1 <- transDecl decl table
@@ -140,7 +161,8 @@ transExec (DeclBlock decl exec) table = do newScope
                                            return (code1 ++ code2)
 transExec (Assign id exp) table = do scope <- getScope
                                      let dest = id ++ "@" ++ show scope
-                                     code1 <- transExp exp table dest
+                                     newDest <- getVarScope dest table
+                                     code1 <- transExp exp table newDest
                                      return code1
 transExec (ExecComp exec1 exec2) table = do code1 <- transExec exec1 table
                                             code2 <- transExec exec2 table
@@ -164,13 +186,15 @@ transExec (PutLine exp) table = do t1 <- newTemp
 transExec (GetLine id1 id2) table = do scope <- getScope
                                        let dest1 = id1 ++ "@" ++ show scope
                                        let dest2 = id2 ++ "@" ++ show scope
+                                       newDest1 <- getVarScope dest1 table
+                                       newDest2 <- getVarScope dest2 table
                                        t1 <- newTemp
                                        t2 <- newTemp
-                                       return ([READ t1, MOVE dest1 t1, LENGTH t2 t1] ++ [MOVE dest2 t2])
+                                       return ([READ t1, MOVE newDest1 t1, LENGTH t2 t1] ++ [MOVE newDest2 t2])
 
 
 
-transExp :: Exp -> SymTab -> Temp -> State Count [Instr]
+transExp :: Exp -> ScopeMem -> Temp -> State Count [Instr]
 transExp TrueLit table dest = return [MOVEI dest (TInt 1)]
 transExp FalseLit table dest = return [MOVEI dest (TInt 0)]
 transExp (IntLit num) table dest = return [MOVEI dest (TInt num)]
@@ -178,7 +202,8 @@ transExp (FloatLit num) table dest = return [MOVEI dest (TDouble num)]
 transExp (StringLit num) table dest = return [MOVEI dest (TString num)]
 transExp (Var id) table dest = do scope <- getScope
                                   let temp = (id ++ "@" ++ show scope)
-                                  return ([MOVE dest temp])
+                                  newTemp <- getVarScope temp table
+                                  return ([MOVE dest newTemp])
 transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1

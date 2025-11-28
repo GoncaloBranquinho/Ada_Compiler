@@ -5,15 +5,15 @@ procedure Main is
         declare
             y : Integer := 2;
             z : Integer := 3;
-            x : Integer := 4;
             begin
                 x := (y + z);
-                Put_Line(x);
+                Get_Line(x,y);
             end;
-        declare 
+        declare
           k : Integer;
         begin
-
+            Put_Line(y);
+            Put_Line(x);
         end;
         Put_Line("A resposta pós local é: ");
         Put_Line(x);

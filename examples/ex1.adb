@@ -4,5 +4,6 @@ procedure Main is
 begin
   y := x + 5;
   Get_Line(x,y);
+  Put_Line(x);
 end Main;
 
