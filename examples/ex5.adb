@@ -12,8 +12,6 @@ procedure Main is
                     b : Integer;
                     begin
                     end;
-                Put_Line(y);
             end;
         Put_Line("A resposta pós local é: ");
-        Put_Line(x);
     end Main;

@@ -3,7 +3,6 @@ procedure Main is
   y : Integer;
 begin
   y := x + 5;
-  Get_Line(x,y);
-  Put_Line(x);
+  y := x + 3;
 end Main;
 

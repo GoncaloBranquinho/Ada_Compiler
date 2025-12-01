@@ -1,4 +1,4 @@
-module IntermediateCode where
+module IR where
 
 import Lexer
 import Parser
@@ -98,6 +98,7 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             let typString = typeToString typ
                                             let decls = map (\v -> DECL v typString) idsList
                                             let moves = map (\v -> MOVE v t1) idsList
+                                            popTemp 1
                                             return (decls ++ code1 ++ moves)
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            let typString = typeToString typ
@@ -123,22 +124,26 @@ transCond (Eq exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
-                                                  return (code1 ++ code2 ++ [COND t1 IntermediateCode.EQ t2 labelt labelf])
+                                                  popTemp 2
+                                                  return (code1 ++ code2 ++ [COND t1 IR.EQ t2 labelt labelf])
 transCond (Ne exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
-                                                  return (code1 ++ code2 ++ [COND t1 IntermediateCode.NE t2 labelt labelf])
+                                                  popTemp 2
+                                                  return (code1 ++ code2 ++ [COND t1 IR.NE t2 labelt labelf])
 transCond (Lt exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
-                                                  return (code1 ++ code2 ++ [COND t1 IntermediateCode.LT t2 labelt labelf])
+                                                  popTemp 2
+                                                  return (code1 ++ code2 ++ [COND t1 IR.LT t2 labelt labelf])
 transCond (Le exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
-                                                  return (code1 ++ code2 ++ [COND t1 IntermediateCode.LE t2 labelt labelf])
+                                                  popTemp 2
+                                                  return (code1 ++ code2 ++ [COND t1 IR.LE t2 labelt labelf])
 transCond (And cond1 cond2) table labelt labelf = do label1 <- newLabel
                                                      code1 <- transCond cond1 table label1 labelf
                                                      code2 <- transCond cond2 table labelt labelf
@@ -151,6 +156,7 @@ transCond (XOr cond1 cond2) table labelt labelf = do code1 <- transCond (Or (And
                                                      return code1
 transCond (Var id) table labelt labelf = do t1 <- newTemp
                                             code1 <- transExp (Var id) table t1
+                                            popTemp 1
                                             return (code1 ++ [COND t1 NE "0" labelt labelf])
 
 transExec :: Exec -> ScopeMem -> State Count [Instr]
@@ -182,6 +188,7 @@ transExec (WhileLoop cond exec) table = do label1 <- newLabel
                                            return ([LABEL label1] ++ code1 ++ [LABEL label2] ++ code2 ++ [JUMP label1, LABEL label3])
 transExec (PutLine exp) table = do t1 <- newTemp
                                    code1 <- transExp exp table t1
+                                   popTemp 1
                                    return (code1 ++ [PRINT t1])
 transExec (GetLine id1 id2) table = do scope <- getScope
                                        let dest1 = id1 ++ "@" ++ show scope
@@ -190,6 +197,7 @@ transExec (GetLine id1 id2) table = do scope <- getScope
                                        newDest2 <- getVarScope dest2 table
                                        t1 <- newTemp
                                        t2 <- newTemp
+                                       popTemp 2
                                        return ([READ t1, MOVE newDest1 t1, LENGTH t2 t1] ++ [MOVE newDest2 t2])
 
 
@@ -208,33 +216,38 @@ transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
+                                         popTemp 2
                                          return (code1 ++ code2 ++ [OP ADD dest t1 t2])
 transExp (Mult exp1 exp2) table dest = do t1 <- newTemp
                                           t2 <- newTemp
                                           code1 <- transExp exp1 table t1
                                           code2 <- transExp exp2 table t2
-                                          return (code1 ++ code2 ++ [OP IntermediateCode.MULT dest t1 t2])
+                                          popTemp 2
+                                          return (code1 ++ code2 ++ [OP IR.MULT dest t1 t2])
 transExp (Sub exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
-                                         return (code1 ++ code2 ++ [OP IntermediateCode.SUB dest t1 t2])
+                                         popTemp 2
+                                         return (code1 ++ code2 ++ [OP IR.SUB dest t1 t2])
 transExp (Div exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
-                                         return (code1 ++ code2 ++ [OP IntermediateCode.DIV dest t1 t2])
+                                         popTemp 2
+                                         return (code1 ++ code2 ++ [OP IR.DIV dest t1 t2])
 transExp (Pow exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
-                                         return (code1 ++ code2 ++ [OP IntermediateCode.POW dest t1 t2])
+                                         popTemp 2
+                                         return (code1 ++ code2 ++ [OP IR.POW dest t1 t2])
 transExp (Concat exp1 exp2) table dest = do t1 <- newTemp
                                             t2 <- newTemp
                                             code1 <- transExp exp1 table t1
                                             code2 <- transExp exp2 table t2
-                                            return (code1 ++ code2 ++ [OP IntermediateCode.CONCAT dest t1 t2])
--- falta meter aqui o Cond, ou seja, exp relop exp, and, or, xor e not.
+                                            popTemp 2
+                                            return (code1 ++ code2 ++ [OP IR.CONCAT dest t1 t2])
 transExp (And exp1 exp2) table dest = do label1 <- newLabel
                                          label2 <- newLabel
                                          label3 <- newLabel

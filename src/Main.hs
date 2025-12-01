@@ -7,7 +7,8 @@ import Data.List
 import Control.Monad.State
 import SymbolTable
 import PrintAST (printAST)
-import IntermediateCode (transAST)
+import IR (transAST)
+import System.Exit (exitWith, ExitCode(..))
 
 main :: IO ()
 main = do
@@ -30,7 +31,11 @@ main = do
             print (if opt >= 0 && opt < size then [scopes !! opt] else scopes)
         [txt, "3"] -> do
             input <- readFile txt
-            print $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
+            let (symtab, (errors, scopemem)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
+            print (symtab, (errors, scopemem))
+            if errors == []
+                then exitWith ExitSuccess
+                else exitWith (ExitFailure 1)
         [txt, "4"] -> do
             input <- readFile txt
             print $ fst $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST

@@ -9,6 +9,10 @@ tests=0
 successes=0
 fails=0
 
+
+rm -f ../examples/*AST.txt ../examples/*Table.txt ../examples/*IR.txt
+
+
 for filename in ../examples/*.adb; do
   tests=$((tests + 1)) 
   txtfile="${filename%.*}AST.txt"
