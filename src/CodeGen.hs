@@ -35,13 +35,21 @@ popTemp = do (offset, temp, dataCounter) <- get
 
 
 nextLabel :: [Instr] -> String -> Bool
-nextLabel (LABEL l1 :_) l2 = l1 == l2
 nextLabel _ _ = False
+nextLabel (LABEL l1 :_) l2 = l1 == l2
+
+
+
+transMips :: [Instr] -> State Count [String]
+transMips instr = do fillData instr
+                     return transIR instr
+
+
 
 
 transIR :: [Instr] -> State Count [String]
 transIR [] = return [""]
 transIR (COND EQ t1 t2 l1 l2:rest) | nextLabel rest l1 = ["beq " + t1 + ", " + t2 + ", " + l1] ++ transIR rest
                                    | nextLabel rest l2 = ["bne " + t1 + ", " + t2 + ", " + l2] ++ transIR rest
-                                   | otherwise         = ...
+                                   | otherwise         = ["beq " + t1 + ", " + t2 + ", " + l1
 -- falta escolhers registos
