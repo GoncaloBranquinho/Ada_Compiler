@@ -5,16 +5,17 @@ procedure Main is
         declare
             y : Integer := 2;
             z : Integer := 3;
+            k : String;
+            v : Integer;
             begin
                 x := (y + z);
-                Get_Line(x,y);
+                Get_Line(k,v);
             end;
         declare
-          k : Integer;
+          k : String;
         begin
-            Put_Line(y);
-            Put_Line(x);
+            k := "ola";
+            Put_Line(k);
         end;
         Put_Line("A resposta pós local é: ");
-        Put_Line(x);
     end Main;
