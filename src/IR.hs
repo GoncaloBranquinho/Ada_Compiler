@@ -15,7 +15,7 @@ data Instr = MOVE Temp Temp
            | PRINT Temp
            | READ Temp
            | LENGTH Temp Temp
-           | DECL Temp Temp
+           | DECL Temp String
     deriving (Show, Eq)
 
 data BinOp = ADD | SUB | MULT | DIV | POW | AND 
