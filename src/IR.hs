@@ -9,7 +9,6 @@ import SymbolTable
 data Instr = MOVE Temp Temp
            | MOVEI Temp Literal
            | OP BinOp Temp Temp Temp
-           | OPI BinOp Temp Temp Int
            | LABEL Label
            | JUMP Label
            | COND BinOp Temp Temp Label Label
