@@ -12,7 +12,7 @@ data Instr = MOVE Temp Temp
            | OPI BinOp Temp Temp Int
            | LABEL Label
            | JUMP Label
-           | COND Temp BinOp Temp Label Label
+           | COND BinOp Temp Temp Label Label
            | PRINT Temp
            | READ Temp
            | LENGTH Temp Temp
@@ -125,25 +125,25 @@ transCond (Eq exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   popTemp 2
-                                                  return (code1 ++ code2 ++ [COND t1 IR.EQ t2 labelt labelf])
+                                                  return (code1 ++ code2 ++ [COND IR.EQ t1 t2 labelt labelf])
 transCond (Ne exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   popTemp 2
-                                                  return (code1 ++ code2 ++ [COND t1 IR.NE t2 labelt labelf])
+                                                  return (code1 ++ code2 ++ [COND IR.NE t1 t2 labelt labelf])
 transCond (Lt exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   popTemp 2
-                                                  return (code1 ++ code2 ++ [COND t1 IR.LT t2 labelt labelf])
+                                                  return (code1 ++ code2 ++ [COND IR.LT t1 t2 labelt labelf])
 transCond (Le exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   popTemp 2
-                                                  return (code1 ++ code2 ++ [COND t1 IR.LE t2 labelt labelf])
+                                                  return (code1 ++ code2 ++ [COND IR.LE t1 t2 labelt labelf])
 transCond (And cond1 cond2) table labelt labelf = do label1 <- newLabel
                                                      code1 <- transCond cond1 table label1 labelf
                                                      code2 <- transCond cond2 table labelt labelf
@@ -157,7 +157,7 @@ transCond (XOr cond1 cond2) table labelt labelf = do code1 <- transCond (Or (And
 transCond (Var id) table labelt labelf = do t1 <- newTemp
                                             code1 <- transExp (Var id) table t1
                                             popTemp 1
-                                            return (code1 ++ [COND t1 NE "0" labelt labelf])
+                                            return (code1 ++ [COND NE t1 "0" labelt labelf])
 
 transExec :: Exec -> ScopeMem -> State Count [Instr]
 transExec EmptyExec _ = return []
