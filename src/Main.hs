@@ -42,5 +42,5 @@ main = do
 
         [txt, "5"] -> do 
             input <- readFile txt 
-            let table = snd $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
-            mapM_ print $ evalState ((transAST $ parse $ alexScanTokensInsensitive input) table) (0, 0, 0)
+            let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
+            mapM_ print $ evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "")

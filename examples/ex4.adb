@@ -2,14 +2,15 @@ procedure Main is
     x : Integer := 5;
     begin
         Put_Line("A resposta local é: ");
+        x := 7;
         declare
             y : Integer := 2;
             z : Integer := 3;
             k : String;
-            v : Integer;
+            x : Integer;
             begin
                 x := (y + z);
-                Get_Line(k,v);
+              
             end;
         declare
           k : String;

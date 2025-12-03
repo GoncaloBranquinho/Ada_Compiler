@@ -1,7 +1,7 @@
 procedure Main is
-  x, z : Integer := 10;
-  y : Integer;
+  x, z : Float := 3.2;
+  y : Float;
 begin
-  y := 3*x + 2*y;
+  y := 1.0 + 2.1;
 end Main;
 
