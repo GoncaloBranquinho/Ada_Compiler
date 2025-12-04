@@ -7,7 +7,7 @@ procedure Main is
             y : Integer := 2;
             z : Integer := 3;
             k : String;
-            x : Integer;
+            
             begin
                 x := (y + z);
               
