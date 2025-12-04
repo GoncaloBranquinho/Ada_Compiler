@@ -13,8 +13,7 @@ data Instr = MOVE Temp Temp
            | JUMP Label
            | COND BinOp Temp Temp Label Label
            | PRINT Temp
-           | READ Temp
-           | LENGTH Temp Temp
+           | READ Temp Temp
            | DECL Temp String
     deriving (Show, Eq)
 
@@ -218,10 +217,7 @@ transExec (PutLine exp) table = do t1 <- newTemp
 transExec (GetLine id1 id2) table = do scope <- getScope
                                        (newDest1,_) <- getVarScope id1 (show scope) table
                                        (newDest2,_) <- getVarScope id2 (show scope) table
-                                       t1 <- newTemp
-                                       t2 <- newTemp
-                                       popTemp 2
-                                       return ([READ t1, MOVE newDest1 t1, LENGTH t2 t1] ++ [MOVE newDest2 t2])
+                                       return [READ newDest1 newDest2]
 
 
 
