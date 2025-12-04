@@ -1,3 +1,4 @@
+
 module SymbolTable where
 
 import Lexer
@@ -42,24 +43,27 @@ convertType t | t == TypeInteger = TypeIntegerST
 type Name = String
 type Assigned = Bool
 type SymTab = [(Name, (TypeST, Assigned))]
-type ScopeID = String
-type ScopeMem = ([(ScopeID, SymTab)], ([SymTab], [ScopeID]))
+type ScopeID = Int
+type ScopeMem = ([(ScopeID, SymTab)], ([(ScopeID, SymTab)], [ScopeID]))
 type ErrorString = String
 type ErrorList = [(ErrorString, TypeST, TypeST)]
 type SymTabState = (SymTab, (ErrorList, ScopeMem))
 
 
 emptyST :: SymTabState
-emptyST = ([], ([], ([], ([], ["0"]))))
+emptyST = ([], ([], ([], ([], [0]))))
 
 bindST :: Name -> TypeST -> Assigned -> Bool -> State SymTabState SymTabState
-bindST n t a b = state (\s -> let x = (if b then n else (n ++ "@" ++ (head $ snd $ snd $ snd $ snd s)), (t, a)) in ((x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if b then (map (\xs -> x:xs) (fst $ snd $ snd $ snd s)) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s)))), (x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if b then (map (\xs -> x:xs) (fst $ snd $ snd $ snd s)) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s))))))
+bindST n t a b = state (\s -> let x = (if b then n else (n ++ "@" ++ (show $ head $ snd $ snd $ snd $ snd s)), (t, a)) in ((x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if (b && ((read $ tail (dropWhile (\xs' -> xs' /= '@') n)) /= (head $ snd $ snd $ snd $ snd s))) then (((map (\xs -> (fst xs, x:(snd xs)))) $ takeWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd s)) ++ (map (\xs -> (fst xs, x:(snd xs))) ((\xs -> if (xs == []) then xs else ([head xs])) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) ++ ((\xs -> if (xs == []) then xs else (tail xs)) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s)))), (x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if (b && ((read $ tail (dropWhile (\xs' -> xs' /= '@') n)) /= (head $ snd $ snd $ snd $ snd s))) then (((map (\xs -> (fst xs, x:(snd xs)))) $ takeWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd s)) ++ (map (\xs -> (fst xs, x:(snd xs))) ((\xs -> if (xs == []) then xs else ([head xs])) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) ++ ((\xs -> if (xs == []) then xs else (tail xs)) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s))))))
+
 
 enterScopeST :: State SymTabState SymTabState
-enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, (fst s:(fst $ snd $ snd $ snd s), (show (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s))):(snd $ snd $ snd $ snd s))))), (fst s, (fst $ snd s, (fst $ snd $ snd s, (fst s:(fst $ snd $ snd $ snd s), (show (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s))):(snd $ snd $ snd $ snd s)))))))
+--enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, ((1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s), fst s):(fst $ snd $ snd $ snd s), (head $ snd $ snd $ snd $ snd s):(snd $ snd $ snd $ snd s))))), (fst s, (fst $ snd s, (fst $ snd $ snd s, ((1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s), fst s):(fst $ snd $ snd $ snd s), (head $ snd $ snd $ snd $ snd s):(snd $ snd $ snd $ snd s)))))))
+enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd $ snd s), (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)):(snd $ snd $ snd $ snd s))))), (fst s, (fst $ snd s, (fst $ snd $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd $ snd s), (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)):(snd $ snd $ snd $ snd s)))))))
+
 
 exitScopeST :: State SymTabState SymTabState
-exitScopeST = state (\s -> ((head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))), ((head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))))))
+exitScopeST = state (\s -> ((snd $ head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))), ((snd $ head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))))))
 
 lookUpST :: Name -> State SymTabState (Name, (TypeST, Assigned))
 lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))

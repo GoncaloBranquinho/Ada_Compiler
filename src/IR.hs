@@ -92,7 +92,7 @@ getVarScope id scope (symtab,(table, _)) = do if scope == "0"
 
 
 searchScope :: String -> String -> [(ScopeID, SymTab)] -> State Count (Temp,String)
-searchScope id scope1 ((scope2, table):rest) = if scope1 == scope2 then searchID id table else searchScope id scope1 rest
+searchScope id scope1 ((scope2, table):rest) = if scope1 == (show scope2) then searchID id table else searchScope id scope1 rest
 
 
 searchID :: String -> SymTab -> State Count (Temp,String)
