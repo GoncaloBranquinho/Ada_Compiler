@@ -31,7 +31,7 @@ instance Show Literal where
 
 type Temp = String
 type Label = String
-type Count = (Int,Int,Int,String)
+type Count = (Int,Int,Int,String,[String])
 
 typeToString :: Type -> String
 typeToString TypeInteger = "Integer"
@@ -41,37 +41,44 @@ typeToString TypeString  = "String"
 
 
 newTemp :: State Count Temp
-newTemp = do (temps, labels, scope, typ) <- get
-             put (temps+1, labels, scope, typ)
+newTemp = do (temps, labels, scope, typ, setString) <- get
+             put (temps+1, labels, scope, typ, setString)
              return ("t" ++ show temps)
 
 popTemp :: Int -> State Count ()
-popTemp n = do (temps, labels, scope, typ) <- get
-               put (temps-n, labels, scope, typ)
+popTemp n = do (temps, labels, scope, typ, setString) <- get
+               put (temps-n, labels, scope, typ, setString)
 
 
 newLabel :: State Count Label
-newLabel = do (temps,labels, scope, typ) <- get
-              put (temps, labels+1, scope, typ)
+newLabel = do (temps,labels, scope, typ, setString) <- get
+              put (temps, labels+1, scope, typ, setString)
               return ("label" ++ show labels)
 
 newScope :: State Count ()
-newScope = do (temps, labels, scope, typ) <- get
-              put (temps, labels, scope+1, typ)
+newScope = do (temps, labels, scope, typ, setString) <- get
+              put (temps, labels, scope+1, typ, setString)
 
 newTyp :: String -> State Count ()
-newTyp str = do (temps, labels, scope, _) <- get
-                put (temps, labels, scope, str)
+newTyp str = do (temps, labels, scope, _, setString) <- get
+                put (temps, labels, scope, str, setString)
 
--- so me falta no main, tambem passar o primeiro symtab, para ter o escopo 0, e depois preciso tambem de no getVarScope, escrever o codigo para o caso de estarmos no ambito 0
+
 getVarTyp :: State Count String
-getVarTyp = do (_,_,_, typ) <- get
+getVarTyp = do (_,_,_, typ,_) <- get
                return typ
 
 
 getScope :: State Count Int
-getScope = do (_, _, scope, _) <- get
+getScope = do (_, _, scope, _,_) <- get
               return scope
+
+addSet :: String -> State Count ()
+addSet str = do (temps,labels,scope,typ,setString) <- get
+                if (elem str setString)
+                  then return ()
+                  else put (temps,labels,scope,typ, setString ++ [str])
+
 
 typToString :: TypeST -> String
 typToString TypeIntegerST = "Integer"
@@ -117,7 +124,7 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             t1 <- newTemp
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
-                                            let decls = map (\v -> DECL v typString) idsList
+                                            let decls = map (\v -> DECL v typString) idsList 
                                             let moves = map (\v -> MOVE v t1) idsList
                                             popTemp 1
                                             return (decls ++ code1 ++ moves)
@@ -231,6 +238,7 @@ transExp (IntLit num) table dest = do newTyp "Integer"
 transExp (FloatLit num) table dest = do newTyp "Float"
                                         return [MOVEI dest (TDouble num)]
 transExp (StringLit num) table dest = do newTyp "String"
+                                         addSet num
                                          return [MOVEI dest (TString num)]
 transExp (Var id) table dest = do scope <- getScope
                                   (newTemp,typ) <- getVarScope id (show scope) table

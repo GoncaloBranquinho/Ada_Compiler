@@ -14,7 +14,7 @@ rm -f ../examples/*AST.txt ../examples/*Table.txt ../examples/*IR.txt
 
 
 for filename in ../examples/*.adb; do
-  tests=$((tests + 1)) 
+  tests=$((tests + 1))
   txtfile="${filename%.*}AST.txt"
   tablefile="${filename%.*}Table.txt"
   irfile="${filename%.*}IR.txt"

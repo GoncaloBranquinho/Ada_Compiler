@@ -8,37 +8,56 @@ import qualified Data.HashMap.Strict as HashMap
 
 data Location = Reg Temp
               | Stack Offset
+              | Heap Offset
               | Global String
 
 type Temp = String
 type Offset = Int
-type Count = (Int, Int, Int)
+type Count = (Int, Int, Int, [String])
 type Table = HashMap.HashMap String Location
 
 newOffset :: Int -> State Count ()
-newOffset n = do (offset, temp, dataCounter) <- get
-              put (offset + n, temp, dataCounter)
+newOffset n = do (offset, temp, dataCounter, dataList) <- get
+              put (offset + n, temp, dataCounter, dataList)
 
-newTemp :: State Count ()
-newTemp = do (offset, temp, dataCounter) <- get
-          put (offset, temp + 1, dataCounter)
+newTemp :: State Count Temp
+newTemp = do (offset, temp, dataCounter, dataList) <- get
+          put (offset, temp + 1, dataCounter, dataList)
           return (if (temp < 10) then ("t" ++ (show temp)) else ("s" ++ (show (temp - 10))))
 
+newData :: State Count Int
+newData = do (offset, temp, dataCounter, dataList) <- get
+             put (offset, temp, dataCounter+1, dataList)
+             return (dataCounter)
+
+addData :: String -> State Count ()
+addData str = do (offset, temp, dataCounter, dataList) <- get
+                 put (offset, temp, dataCounter, dataList ++ str)
+
 popOffset :: Int -> State Count ()
-popOffset n = do (offset, temp, dataCounter) <- get
-              put (offset - n, temp, dataCounter)
+popOffset n = do (offset, temp, dataCounter, dataList) <- get
+              put (offset - n, temp, dataCounter, dataList)
 
 popTemp :: State Count ()
-popTemp = do (offset, temp, dataCounter) <- get
-          put (offset, temp - 1, dataCounter)
+popTemp = do (offset, temp, dataCounter, dataList) <- get
+          put (offset, temp - 1, dataCounter, dataList)
 
 nextLabel :: [Instr] -> String -> Bool
 nextLabel (LABEL l1 :_) l2 = l1 == l2
 nextLabel _ _ = False
 
-transMips :: [Instr] -> State Count [String]
-transMips instr = do fillData instr
-                     return transIR instr
+transMips :: [Instr] -> [String] -> State Count [String]
+transMips instr stringLiterals = do fillData stringLiterals
+                                    code2 <- transIR instr
+                                    (_,_,_,dataList) <- get
+                                    return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
+ 
+
+fillData :: [String] -> State Count ()
+fillData [] = return ()
+fillData (str:remainder) = do dataCounter <- newData 
+                              addData ["str" ++ show dataCounter ++ ": .asciiz" ++ str]
+                              return fillData remainder
 
 defaultStringSize :: String
 defaultStringSize = 256
