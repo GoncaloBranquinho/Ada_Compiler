@@ -5,8 +5,10 @@ import Parser
 import Data.List
 import Control.Monad.State
 import SymbolTable
+import qualified Data.Map.Strict as Map
+import Control.Monad.RWS (MonadState(get))
 
-data Instr = MOVE Temp Temp
+data Instr = MOVE String Temp Temp
            | MOVEI Temp Literal
            | OP BinOp Temp Temp Temp
            | LABEL Label
@@ -22,16 +24,17 @@ data BinOp = ADD String | SUB String | MULT String | DIV String | POW String | A
     deriving (Show, Eq)
 
 data Literal = TInt Int | TDouble Double | TString String
-    deriving (Eq)
+    deriving (Show, Eq)
 
-instance Show Literal where
-    show (TInt n)    = show n
-    show (TDouble n) = show n
-    show (TString n) = show n
+--instance Show Literal where
+  --  show (TInt n)    = show n
+    --show (TDouble n) = show n
+    --show (TString n) = show n
 
 type Temp = String
 type Label = String
-type Count = (Int,Int,Int,String,[String])
+type Table = Map.Map Int [(String,Int)]
+type Count = (Int,Int,Int,String,[String], Table, Int, Int)
 
 typeToString :: Type -> String
 typeToString TypeInteger = "Integer"
@@ -39,45 +42,83 @@ typeToString TypeBoolean = "Boolean"
 typeToString TypeFloat   = "Float"
 typeToString TypeString  = "String"
 
+typeToOffset :: Type -> Int
+typeToOffset TypeInteger = 4
+typeToOffset TypeBoolean = 1
+typeToOffset TypeFloat   = 4
+
 
 newTemp :: State Count Temp
-newTemp = do (temps, labels, scope, typ, setString) <- get
-             put (temps+1, labels, scope, typ, setString)
+newTemp = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips) <- get
+             put (temps+1, labels, scope, typ, setString, table, currScopeMips, nextScopeMips)
              return ("t" ++ show temps)
 
 popTemp :: Int -> State Count ()
-popTemp n = do (temps, labels, scope, typ, setString) <- get
-               put (temps-n, labels, scope, typ, setString)
+popTemp n = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips) <- get
+               put (temps-n, labels, scope, typ, setString, table,currScopeMips, nextScopeMips)
 
 
 newLabel :: State Count Label
-newLabel = do (temps,labels, scope, typ, setString) <- get
-              put (temps, labels+1, scope, typ, setString)
+newLabel = do (temps,labels, scope, typ, setString, table,currScopeMips, nextScopeMips) <- get
+              put (temps, labels+1, scope, typ, setString, table,currScopeMips, nextScopeMips)
               return ("label" ++ show labels)
 
 newScope :: State Count ()
-newScope = do (temps, labels, scope, typ, setString) <- get
-              put (temps, labels, scope+1, typ, setString)
+newScope = do (temps, labels, scope, typ, setString, table,currScopeMips, nextScopeMips) <- get
+              put (temps, labels, scope+1, typ, setString, table,currScopeMips, nextScopeMips)
+
+newScopeMips :: State Count ()
+newScopeMips = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips) <- get
+                  put (temps, labels, scope, typ, setString, table, currScopeMips+1, nextScopeMips)
+
 
 newTyp :: String -> State Count ()
-newTyp str = do (temps, labels, scope, _, setString) <- get
-                put (temps, labels, scope, str, setString)
+newTyp str = do (temps, labels, scope, _, setString, table,currScopeMips, nextScopeMips) <- get
+                put (temps, labels, scope, str, setString, table,currScopeMips, nextScopeMips)
 
 
 getVarTyp :: State Count String
-getVarTyp = do (_,_,_, typ,_) <- get
+getVarTyp = do (_,_,_, typ,_,_,currScopeMips,_) <- get
                return typ
 
 
 getScope :: State Count Int
-getScope = do (_, _, scope, _,_) <- get
+getScope = do (_, _, scope,_,_,_,currScopeMips,_) <- get
               return scope
 
+
+getCurrScopeMips :: State Count Int
+getCurrScopeMips = do (_,_,_,_,_,_,currScopeMips,_) <- get
+                      return currScopeMips
+
+
+enterScope :: State Count Int
+enterScope = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips) <- get
+                put (temps,labels,scope,typ,setString, table,nextScopeMips,nextScopeMips+1)
+                return nextScopeMips
+
+exitScope :: Int -> State Count ()
+exitScope parentScope = do (temps,labels,scope,typ,setString, table,_,nextScopeMips) <- get
+                           put (temps,labels,scope,typ,setString, table,parentScope,nextScopeMips)
+
+
+
+
+
 addSet :: String -> State Count ()
-addSet str = do (temps,labels,scope,typ,setString) <- get
+addSet str = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips) <- get
                 if (elem str setString)
                   then return ()
-                  else put (temps,labels,scope,typ, setString ++ [str])
+                  else put (temps,labels,scope,typ, setString ++ [str], table,currScopeMips, nextScopeMips)
+
+
+addTable :: String-> Int -> State Count ()
+addTable str offset = do (temps,labels,scope,typ,setString,table,currScopeMips, nextScopeMips) <- get
+                         let scopeList = Map.findWithDefault [] currScopeMips table
+                         let newScopeList = if (any (\(s,_) -> s == str) scopeList)
+                                                then scopeList
+                                                else (scopeList ++ [(str,offset)])
+                         put (temps,labels,scope,typ,setString,Map.insert currScopeMips newScopeList table,currScopeMips, nextScopeMips)
 
 
 typToString :: TypeST -> String
@@ -110,10 +151,11 @@ searchID id1 ((temp,(typ,_)):rest) = do let id2 = takeWhile (\x -> x /= '@') tem
                                           else 
                                               searchID id1 rest
 
-transAST :: Prog -> (SymTab, ScopeMem) -> State Count [Instr]
+transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table)
 transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
-                                     return (code1 ++ code2)
+                                     (_,_,_,_,_,table,_,_) <- get
+                                     return ((code1 ++ code2),table)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -121,14 +163,19 @@ transDecl (DeclComp decl1 decl2) table = do code1 <- transDecl decl1 table
                                             code2 <- transDecl decl2 table
                                             return (code1 ++ code2)
 transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
+                                            let offset = typeToOffset typ
+                                            mapM_ (\id -> addTable id offset) (if typ /= TypeString then idsList else [])
                                             t1 <- newTemp
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
-                                            let decls = map (\v -> DECL v typString) idsList 
-                                            let moves = map (\v -> MOVE v t1) idsList
+                                            let decls = map (\v -> DECL v typString) idsList
+                                            let newTyp = typeToString typ
+                                            let moves = map (\v -> MOVE newTyp v t1) idsList
                                             popTemp 1
                                             return (decls ++ code1 ++ moves)
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
+                                           let offset = typeToOffset typ
+                                           mapM_ (\id -> addTable id offset) (if typ /= TypeString then idsList else [])
                                            let typString = typeToString typ
                                            return (concatMap (\v -> [DECL v typString]) idsList)
 
@@ -194,8 +241,11 @@ transCond (Var id) table labelt labelf = do t1 <- newTemp
 transExec :: Exec -> (SymTab, ScopeMem) -> State Count [Instr]
 transExec EmptyExec _ = return []
 transExec (DeclBlock decl exec) table = do newScope
+                                           parentScope <- getCurrScopeMips
+                                           current <- enterScope
                                            code1 <- transDecl decl table
                                            code2 <- transExec exec table
+                                           exitScope parentScope
                                            return (code1 ++ code2)
 transExec (Assign id exp) table = do scope <- getScope
                                      (newDest, _) <- getVarScope id (show scope) table
@@ -243,7 +293,7 @@ transExp (StringLit num) table dest = do newTyp "String"
 transExp (Var id) table dest = do scope <- getScope
                                   (newTemp,typ) <- getVarScope id (show scope) table
                                   newTyp typ
-                                  return ([MOVE dest newTemp])
+                                  return ([MOVE typ dest newTemp])
 transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
                                          code1 <- transExp exp1 table t1

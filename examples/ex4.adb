@@ -15,7 +15,7 @@ procedure Main is
         declare
           k : String;
         begin
-            k := "ola";
+            k := "ola" & "adeus" & "oi";
             Put_Line(k);
         end;
         Put_Line("A resposta pós local é: ");
