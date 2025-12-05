@@ -40,27 +40,34 @@ transMips :: [Instr] -> State Count [String]
 transMips instr = do fillData instr
                      return transIR instr
 
+defaultStringSize :: String
+defaultStringSize = 256
+
 transIR :: [Instr] -> State Count [String]
 transIR [] = return []
-transIR ((COND EQ t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["beq " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ (transIR remainder)
-                                          | nextLabel remainder l1 = ["bne " ++ t1 ++ ", " ++ t2 ++ ", " ++ l2] ++ (transIR remainder)
-                                          | otherwise              = ["beq " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
-transIR ((COND NE t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["bne " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ (transIR remainder)
-                                          | nextLabel remainder l1 = ["beq " ++ t1 ++ ", " ++ t2 ++ ", " ++ l2] ++ (transIR remainder)
-                                          | otherwise              = ["bne " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
-transIR ((COND LT t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["blt " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ (transIR remainder)
-                                          | nextLabel remainder l1 = ["bge " ++ t1 ++ ", " ++ t2 ++ ", " ++ l2] ++ (transIR remainder)
-                                          | otherwise              = ["blt " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
-transIR ((COND LE t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["ble " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ (transIR remainder)
-                                          | nextLabel remainder l1 = ["bgt " ++ t1 ++ ", " ++ t2 ++ ", " ++ l2] ++ (transIR remainder)
-                                          | otherwise              = ["ble " ++ t1 ++ ", " ++ t2 ++ ", " ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
+transIR ((COND EQ t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["beq " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ (transIR remainder)
+                                          | nextLabel remainder l1 = ["bne " ++ t1 ++ "," ++ t2 ++ "," ++ l2] ++ (transIR remainder)
+                                          | otherwise              = ["beq " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
+transIR ((COND NE t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["bne " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ (transIR remainder)
+                                          | nextLabel remainder l1 = ["beq " ++ t1 ++ "," ++ t2 ++ "," ++ l2] ++ (transIR remainder)
+                                          | otherwise              = ["bne " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
+transIR ((COND LT t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["blt " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ (transIR remainder)
+                                          | nextLabel remainder l1 = ["bge " ++ t1 ++ "," ++ t2 ++ "," ++ l2] ++ (transIR remainder)
+                                          | otherwise              = ["blt " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
+transIR ((COND LE t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["ble " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ (transIR remainder)
+                                          | nextLabel remainder l1 = ["bgt " ++ t1 ++ "," ++ t2 ++ "," ++ l2] ++ (transIR remainder)
+                                          | otherwise              = ["ble " ++ t1 ++ "," ++ t2 ++ "," ++ l1] ++ ["j " ++ l2] ++ (transIR remainder)
 transIR ((LABEL l):remainder) = [l ++ ":"] ++ (transIR remainder)
 transIR ((JUMP l):remainder) = ["j " ++ l] ++ (transIR remainder)
-transIR ((OP ADD t1 t2 t3):remainder) = ["add " ++ t1 ++ ", " ++ t2 ++ ", " ++ t3] ++ (transIR remainder)
-transIR ((OP SUB t1 t2 t3):remainder) = ["sub " ++ t1 ++ ", " ++ t2 ++ ", " ++ t3] ++ (transIR remainder)
-transIR ((OP MUL t1 t2 t3):remainder) = ["mul " ++ t1 ++ ", " ++ t2 ++ ", " ++ t3] ++ (transIR remainder)
-transIR ((OP DIV t1 t2 t3):remainder) = ["div " ++ t1 ++ ", " ++ t2 ++ ", " ++ t3] ++ (transIR remainder)
-transIR ((MOVE t1 t2):remainder) = ["move " ++ t1 ++ ", " ++ t2] ++ (transIR remainder)
-transIR ((MOVEI t1 k):remainder) = ["li " ++ t1 ++ ", " ++ k] ++ (transIR remainder)
+transIR ((OP ADD t t1 t2 t3):remainder) = ["add " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+transIR ((OP SUB t t1 t2 t3):remainder) = ["sub " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+transIR ((OP MUL t t1 t2 t3):remainder) = ["mul " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+transIR ((OP DIV t t1 t2 t3):remainder) = ["div " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+transIR ((MOVE t1 t2):remainder) = ["move " ++ t1 ++ "," ++ t2] ++ (transIR remainder)
+transIR ((MOVEI t1 k):remainder) = ["li " ++ t1 ++ "," ++ k] ++ (transIR remainder)
+transIR ((PRINT t1):remainder) STACK = ["li $v0,4"] ++ ["la $a0," ++ t1] ++ ["syscall"] ++ (transIR remainder)
+transIR ((PRINT t1):remainder) HEAP = ["la $a0," ++ location] ++ ["lw " ++ t1 ++ ",0($a0)"] ++ ["la $a0,strbuf"] ++ [l ++ ":"] ++ ["lb $a1,0(" ++ t1 ++ ")"] ++ ["sb $a1,0($a0)"] ++ ["addi " ++ t1 ++ "," ++ t1 ++ ",1"] ++ ["addi $a0,$a0,1"] ++ ["bne $a1,$0,l"] ++ ["li $v0,4"] ++ ["la $a0,strbuf"] ++ ["syscall"] ++ (transIR remainder)
+transIR ((READ t1 t2 l1 l2):remainder) = ["la " ++ t1 ++ "," ++ "strbuf"] ++ ["li $v0,8"] ++ ["move $a0," ++ t1] ++ ["li $a1,256"] ++ ["syscall"] ++ [l1 ++ ":"] ++ ["lb " ++ t2 ++ ",0($a0)"] ++ ["addi $a0,$a0,1"] ++ ["bne " ++ t2 ++ ",$0," ++ l1] ++ ["sub " ++ t2 ++ ",$a0," ++ t1] ++ ["move $a1,$a0"] ++ ["li $v0,9"] ++ ["move $a0," ++ t2] ++ ["syscall"] ++ [l2 ++ ":"] ++ ["lb $a0,0(" ++ t1 ++ ")"] ++ ["sb $a0,0($v0)"] ++ ["addi " ++ t1 ++ "," ++ t1 ++ ",1"] ++ ["addi $v0,$v0,1"] ++ ["bne " ++ t1 ++ ",$a1," ++ l2] ++ ["sub " ++ t1 ++ ",$v0," ++ t2] ++ ["la $a0," ++ location] ++ ["sw " ++ t1 ++ ",0($a0)"] ++ (transIR remainder)
+
 -- FALTA FAZER VERSOES DIFERENTES PARA FLOAT E INT!
 -- falta escolhers registos
