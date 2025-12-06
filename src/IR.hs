@@ -17,6 +17,8 @@ data Instr = MOVE String Temp Temp
            | PRINT Temp
            | READ Temp Temp
            | DECL Temp String
+           | BEGIN
+           | END
     deriving (Show, Eq)
 
 data BinOp = ADD String | SUB String | MULT String | DIV String | POW String | AND
@@ -33,7 +35,7 @@ data Literal = TInt Int | TDouble Double | TString String
 
 type Temp = String
 type Label = String
-type Table = Map.Map Int [(String,Int)]
+type Table = Map.Map Int [(String,Int,Bool)]
 type Count = (Int,Int,Int,String,[String], Table, Int, Int, [Int])
 
 typeToString :: Type -> String
@@ -51,7 +53,7 @@ typeToOffset TypeFloat   = 4
 newTemp :: State Count Temp
 newTemp = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder) <- get
              put (temps+1, labels, scope, typ, setString, table, currScopeMips, nextScopeMips,finishOrder)
-             return ("t" ++ show temps)
+             return ("_t" ++ show temps ++ "@" ++ show currScopeMips)
 
 popTemp :: Int -> State Count ()
 popTemp n = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder) <- get
@@ -112,13 +114,13 @@ addSet str = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScope
                   else put (temps,labels,scope,typ, setString ++ [str], table,currScopeMips, nextScopeMips, finishOrder)
 
 
-addTable :: String-> Int -> State Count ()
-addTable str offset = do (temps,labels,scope,typ,setString,table,currScopeMips, nextScopeMips, finishOrder) <- get
-                         let scopeList = Map.findWithDefault [] currScopeMips table
-                         let newScopeList = if (any (\(s,_) -> s == str) scopeList)
-                                                then scopeList
-                                                else (scopeList ++ [(str,offset)])
-                         put (temps,labels,scope,typ,setString,Map.insert currScopeMips newScopeList table,currScopeMips, nextScopeMips, finishOrder)
+addTable :: String -> Int -> Bool -> State Count ()
+addTable str offset isFloat = do (temps,labels,scope,typ,setString,table,currScopeMips, nextScopeMips, finishOrder) <- get
+                                 let scopeList = Map.findWithDefault [] currScopeMips table
+                                 let newScopeList = if (any (\(s,_,_) -> s == str) scopeList)
+                                                      then scopeList
+                                                      else (scopeList ++ [(str,offset,isFloat)])
+                                 put (temps,labels,scope,typ,setString,Map.insert currScopeMips newScopeList table,currScopeMips, nextScopeMips, finishOrder)
 
 
 addFinishOrder :: Int -> State Count ()
@@ -160,7 +162,7 @@ transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
                                      (_,_,_,_,_,table,_,_, finishOrder) <- get
-                                     return ((code1 ++ code2),table, finishOrder)
+                                     return ([IR.BEGIN] ++ (code1 ++ code2) ++ [IR.END],table, finishOrder)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -169,7 +171,8 @@ transDecl (DeclComp decl1 decl2) table = do code1 <- transDecl decl1 table
                                             return (code1 ++ code2)
 transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             let offset = typeToOffset typ
-                                            mapM_ (\id -> addTable id offset) (if typ /= TypeString then idsList else [])
+                                            let isFloat = typ == TypeFloat
+                                            mapM_ (\id -> addTable id offset isFloat) (if typ /= TypeString then idsList else [])
                                             t1 <- newTemp
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
@@ -180,7 +183,8 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             return (decls ++ code1 ++ moves)
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            let offset = typeToOffset typ
-                                           mapM_ (\id -> addTable id offset) (if typ /= TypeString then idsList else [])
+                                           let isFloat = typ == TypeFloat
+                                           mapM_ (\id -> addTable id offset isFloat) (if typ /= TypeString then idsList else [])
                                            let typString = typeToString typ
                                            return (concatMap (\v -> [DECL v typString]) idsList)
 
@@ -202,8 +206,8 @@ transCond (Not cond) table labelt labelf = do code1 <- transCond cond table labe
                                               return code1
 transCond (Eq exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
-                                                  addTable t1 4
-                                                  addTable t2 4
+                                                  addTable t1 4 False
+                                                  addTable t2 4 False
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   typ <- getVarTyp
@@ -211,8 +215,8 @@ transCond (Eq exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   return (code1 ++ code2 ++ [COND (IR.EQ typ) t1 t2 labelt labelf])
 transCond (Ne exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
-                                                  addTable t1 4
-                                                  addTable t2 4
+                                                  addTable t1 4 False
+                                                  addTable t2 4 False
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   typ <- getVarTyp
@@ -220,8 +224,8 @@ transCond (Ne exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   return (code1 ++ code2 ++ [COND (IR.NE typ) t1 t2 labelt labelf])
 transCond (Lt exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
-                                                  addTable t1 4
-                                                  addTable t2 4
+                                                  addTable t1 4 False
+                                                  addTable t2 4 False
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   typ <- getVarTyp
@@ -229,8 +233,8 @@ transCond (Lt exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   return (code1 ++ code2 ++ [COND (IR.LT typ) t1 t2 labelt labelf])
 transCond (Le exp1 exp2) table labelt labelf = do t1 <- newTemp
                                                   t2 <- newTemp
-                                                  addTable t1 4
-                                                  addTable t2 4
+                                                  addTable t1 4 False
+                                                  addTable t2 4 False
                                                   code1 <- transExp exp1 table t1
                                                   code2 <- transExp exp2 table t2
                                                   typ <- getVarTyp
@@ -247,7 +251,7 @@ transCond (Or cond1 cond2) table labelt labelf = do label1 <- newLabel
 transCond (XOr cond1 cond2) table labelt labelf = do code1 <- transCond (Or (And cond1 (Not cond2)) (And (Not cond1) cond2)) table labelt labelf
                                                      return code1
 transCond (Var id) table labelt labelf = do t1 <- newTemp
-                                            addTable t1 4
+                                            addTable t1 4 False
                                             code1 <- transExp (Var id) table t1
                                             popTemp 1
                                             return (code1 ++ [COND (NE "Integer") t1 "0" labelt labelf])
@@ -261,7 +265,7 @@ transExec (DeclBlock decl exec) table = do newScope
                                            code2 <- transExec exec table
                                            addFinishOrder current
                                            exitScope parentScope
-                                           return (code1 ++ code2)
+                                           return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END])
 transExec (Assign id exp) table = do scope <- getScope
                                      (newDest, _) <- getVarScope id (show scope) table
                                      code1 <- transExp exp table newDest
@@ -283,7 +287,7 @@ transExec (WhileLoop cond exec) table = do label1 <- newLabel
                                            code2 <- transExec exec table
                                            return ([LABEL label1] ++ code1 ++ [LABEL label2] ++ code2 ++ [JUMP label1, LABEL label3])
 transExec (PutLine exp) table = do t1 <- newTemp
-                                   addTable t1 4
+                                   addTable t1 4 False
                                    code1 <- transExp exp table t1
                                    popTemp 1
                                    return (code1 ++ [PRINT t1])
@@ -309,12 +313,12 @@ transExp (StringLit num) table dest = do newTyp "String"
 transExp (Var id) table dest = do scope <- getScope
                                   (newTemp,typ) <- getVarScope id (show scope) table
                                   newTyp typ
-                                  addTable dest 4
+                                  addTable dest 4 False
                                   return ([MOVE typ dest newTemp])
 transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
-                                         addTable t1 4
-                                         addTable t2 4
+                                         addTable t1 4 False
+                                         addTable t2 4 False
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
                                          typ <- getVarTyp
@@ -322,8 +326,8 @@ transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          return (code1 ++ code2 ++ [OP (ADD typ) dest t1 t2])
 transExp (Mult exp1 exp2) table dest = do t1 <- newTemp
                                           t2 <- newTemp
-                                          addTable t1 4
-                                          addTable t2 4
+                                          addTable t1 4 False
+                                          addTable t2 4 False
                                           code1 <- transExp exp1 table t1
                                           code2 <- transExp exp2 table t2
                                           typ <- getVarTyp
@@ -331,8 +335,8 @@ transExp (Mult exp1 exp2) table dest = do t1 <- newTemp
                                           return (code1 ++ code2 ++ [OP (IR.MULT typ) dest t1 t2])
 transExp (Sub exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
-                                         addTable t1 4
-                                         addTable t2 4
+                                         addTable t1 4 False
+                                         addTable t2 4 False
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
                                          typ <- getVarTyp
@@ -340,8 +344,8 @@ transExp (Sub exp1 exp2) table dest = do t1 <- newTemp
                                          return (code1 ++ code2 ++ [OP (IR.SUB typ) dest t1 t2])
 transExp (Div exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
-                                         addTable t1 4
-                                         addTable t2 4
+                                         addTable t1 4 False
+                                         addTable t2 4 False
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
                                          typ <- getVarTyp
@@ -349,8 +353,8 @@ transExp (Div exp1 exp2) table dest = do t1 <- newTemp
                                          return (code1 ++ code2 ++ [OP (IR.DIV typ) dest t1 t2])
 transExp (Pow exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
-                                         addTable t1 4
-                                         addTable t2 4
+                                         addTable t1 4 False
+                                         addTable t2 4 False
                                          code1 <- transExp exp1 table t1
                                          code2 <- transExp exp2 table t2
                                          typ <- getVarTyp
@@ -358,8 +362,8 @@ transExp (Pow exp1 exp2) table dest = do t1 <- newTemp
                                          return (code1 ++ code2 ++ [OP (IR.POW typ) dest t1 t2])
 transExp (Concat exp1 exp2) table dest = do t1 <- newTemp
                                             t2 <- newTemp
-                                            addTable t1 4
-                                            addTable t2 4
+                                            addTable t1 4 False
+                                            addTable t2 4 False
                                             code1 <- transExp exp1 table t1
                                             code2 <- transExp exp2 table t2
                                             popTemp 2

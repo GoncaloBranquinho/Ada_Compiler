@@ -4,12 +4,14 @@ procedure Main is
         Put_Line("A resposta local é: ");
         x := 7;
         declare
-            y : Integer := 2;
-            z : Integer := 3;
-            k : String;
-            
+            a : Integer := 2;
+            b : Integer := 3;
+            x : Integer := 2;
+            y : Integer := 3;
+          
             begin
-                x := (y + z);
+                x := a+b;
+                y := a-b;
               
             end;
         declare

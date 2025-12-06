@@ -1,24 +1,128 @@
+module MemoryAllocator where
 import qualified Data.Map.Strict as Map
 import Control.Monad.State
 
-data Location = RegInt Reg
-              | RegFloat Reg
+data Location = RegI Reg
+              | RegF Reg
               | Stack Offset
-              | Heap Offset
-              | Global String
+              deriving (Show,Eq)
 
 type Reg = String
 type Offset = Int
-type Count = (Int, Int, Int, Table)
-type Table = Map.Map String Location
+type Count = (Int, Int, Int, Adresses, ScpInfo)
+type Adresses = Map.Map String [Location]
+type ScpInfo = Map.Map Int (Int,Int,Int)
+type TableIR = [(Int, [(String,Int,Bool)])]
 
-newReg :: State Count Reg
-newReg = do (reg, stackP, dataP, tbl) <- get
-            put (reg+1, stackP, dataP, tbl)
-            return (if reg < 10 then "t" ++ show reg else "s" ++ show (reg - 10))
+newRegI :: State Count Reg
+newRegI = do (regI, regF, stackP, tbl, scpInfo) <- get
+             put (regI+1, regF, stackP, tbl, scpInfo)
+             return (if regI < 10 then "$t" ++ show regI else "$s" ++ show (regI - 10))
+
+
+popRegI :: Int -> State Count ()
+popRegI n = do (regI,regF,stackP,tbl,scpInfo) <- get
+               put (regI-n,regF,stackP,tbl,scpInfo)
+
+newRegF :: State Count Reg
+newRegF = do (regI,regF,stackP,tbl,scpInfo) <- get
+             put (regI, regF+1, stackP, tbl, scpInfo)
+             return (if regF < 10 then "$f" ++ show regF else "$f" ++ show (regF+10))
+
+
+popRegF :: Int -> State Count ()
+popRegF n = do (regI,regF,stackP,tbl,scpInfo) <- get
+               put (regI,regF-n,stackP,tbl,scpInfo)
 
 newStackP :: Int -> State Count Int
-newStackP n = do (reg, stackP, dataP, tbl) <- get
-                 put (reg, stackP+n, dataP, tbl)
+newStackP n = do (regI,regF,stackP,tbl,scpInfo) <- get
+                 put (regI,regF,stackP+n,tbl,scpInfo)
                  return stackP
 
+
+popStackP :: Int -> State Count ()
+popStackP n = do (regI,regF,stackP,tbl,scpInfo) <- get
+                 put (regI,regF,stackP-n,tbl,scpInfo)
+
+deallocate :: Int -> State Count ()
+deallocate scp = do (_,_,_,_,scpInfo) <- get
+                    let (scpRegI,scpRegF,scpStackP) = scpInfo Map.! scp
+                    popRegI scpRegI
+                    popRegF scpRegF
+                    popStackP scpStackP
+
+
+allocate :: TableIR -> [Int] -> State Count (Adresses,ScpInfo)
+allocate [] [] = do (_,_,_,tbl,scpInfo) <- get
+                    return (tbl,scpInfo)
+allocate [] (scp:scps) = do deallocate scp
+                            allocate [] scps
+
+allocate ((scp, content):remainder) (scp':nextScps) = do allocateScope scp content
+                                                         if scp == scp'
+                                                             then deallocate scp
+                                                             else return ()
+                                                         let scps = if scp == scp'
+                                                                        then nextScps
+                                                                        else scp':nextScps
+                                                         allocate remainder scps
+allocateScope :: Int -> [(String,Int,Bool)] -> State Count ()
+allocateScope _ [] = return ()
+allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
+                                        allocateScope scp nextIds
+
+
+-- atualmente cada temporario tem um registro para int e outro para float, ou entao vai para a stack. Acho que é possivel modificar o codigo intermedio para verificar se um temporario vai alguma vez guardar floats
+allocateReg :: Int -> (String,Int,Bool) -> State Count ()
+allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
+                                        if (regI == 19 && (not isFloat || head id == '_')) ||
+                                           (regF == 21 && (isFloat || head id == '_'))
+                                           then allocateStack scp (id,bytes,isFloat)
+                                           else do
+                                               (newRegI', newRegF', tbl', scpInfo') <- 
+                                                 if head id == '_'
+                                                 then do
+                                                   rI <- newRegI
+                                                   rF <- newRegF
+                                                   let tbl'' = Map.insertWith (++) id [RegI rI, RegF rF] tbl
+                                                   sInfo <- updateScp scp [1,2] 1
+                                                   return (regI+1, regF+1, tbl'', sInfo)
+                                                 else if (not isFloat)
+                                                 then do
+                                                   rI <- newRegI
+                                                   let tbl'' = Map.insertWith (++) id [RegI rI] tbl
+                                                   sInfo <- updateScp scp [1] 1
+                                                   return (regI+1, regF, tbl'', sInfo)
+                                                 else do
+                                                   rF <- newRegF
+                                                   let tbl'' = Map.insertWith (++) id [RegF rF] tbl
+                                                   sInfo <- updateScp scp [2] 1
+                                                   return (regI, regF+1, tbl'', sInfo)
+                                               put (newRegI', newRegF', stackP, tbl', scpInfo')
+
+
+allocateStack :: Int -> (String,Int,Bool) -> State Count ()
+allocateStack scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
+                                          sInfo <- updateScp scp [3] bytes
+                                          let tbl' = Map.insertWith (++) id [Stack (stackP+bytes)] tbl
+                                          put (regI,regF,stackP+bytes,tbl',sInfo)
+
+updateScp :: Int -> [Int] -> Int -> State Count ScpInfo
+updateScp scp [] _ = do (_,_,_,_,scpInfo) <- get
+                        return scpInfo
+updateScp scp (idx:idxs) bytes = do (regI,regF,stackP,tbl,scpInfo) <- get
+                                    let scpInfo' = Map.alter 
+                                                        (\val ->
+                                                            case val of
+                                                              Nothing -> Just (updateIdx idx bytes (0,0,0))
+                                                              Just val' -> Just (updateIdx idx bytes val')
+                                                        ) scp scpInfo
+
+                                    put (regI,regF,stackP,tbl,scpInfo')
+                                    updateScp scp idxs bytes
+
+
+updateIdx :: Int -> Int -> (Int, Int, Int) -> (Int, Int, Int)
+updateIdx 1 bytes (x, y, z) = (x+bytes, y, z)
+updateIdx 2 bytes (x, y, z) = (x, y+bytes, z)
+updateIdx 3 bytes (x, y, z) = (x, y, z+bytes)

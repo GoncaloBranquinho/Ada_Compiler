@@ -10,7 +10,7 @@ successes=0
 fails=0
 
 
-rm -f ../examples/*AST.txt ../examples/*Table.txt ../examples/*IR.txt
+rm -f ../examples/*AST.txt ../examples/*Table.txt ../examples/*IR.txt -f ../examples/*Addresses.txt
 
 
 for filename in ../examples/*.adb; do
@@ -18,8 +18,9 @@ for filename in ../examples/*.adb; do
   txtfile="${filename%.*}AST.txt"
   tablefile="${filename%.*}Table.txt"
   irfile="${filename%.*}IR.txt"
+  addresses="${filename%.*}Addresses.txt"
 
-  if ../src/bin/ada "$filename" > "$txtfile" 2>&1 && ../src/bin/ada "$filename" 3 > "$tablefile" 2>&1 && ../src/bin/ada "$filename" 5 > "$irfile" 2>&1; then
+  if ../src/bin/ada "$filename" > "$txtfile" 2>&1 && ../src/bin/ada "$filename" 3 > "$tablefile" 2>&1 && ../src/bin/ada "$filename" 5 > "$irfile" 2>&1 && ../src/bin/ada "$filename" 6 > "$addresses" 2>&1; then
     echo -e "\033[0;32m$filename Success\033[0m"
     successes=$((successes + 1))
   else
