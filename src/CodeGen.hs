@@ -86,40 +86,47 @@ getAdress str loc = do (_,_,_,_,table) <- get
 
 transIR :: [Instr] -> State Count [String]
 transIR [] = return []
-transIR ((COND EQ t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
-                                            | nextLabel remainder l1 = ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
-                                            | otherwise              = ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2] ++ (transIR remainder)
-                                            where t1' = getAdress t1
-                                                  t2' = getAdress t2
-                                                  l1' = getAdress l1
-                                                  l2' = getAdress l2
-transIR ((COND NE t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
-                                            | nextLabel remainder l1 = ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
-                                            | otherwise              = ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2] ++ (transIR remainder)
-                                            where t1' = getAdress t1
-                                                  t2' = getAdress t2
-                                                  l1' = getAdress l1
-                                                  l2' = getAdress l2
-transIR ((COND LT t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["blt " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
-                                            | nextLabel remainder l1 = ["bge " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
-                                            | otherwise              = ["blt " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2] ++ (transIR remainder)
-                                            where t1' = getAdress t1
-                                                  t2' = getAdress t2
-                                                  l1' = getAdress l1
-                                                  l2' = getAdress l2
-transIR ((COND LE t t1 t2 l1 l2):remainder) | nextLabel remainder l2 = ["ble " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
-                                            | nextLabel remainder l1 = ["bgt " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
-                                            | otherwise              = ["ble " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2] ++ (transIR remainder)
-                                            where t1' = getAdress t1
-                                                  t2' = getAdress t2
-                                                  l1' = getAdress l1
-                                                  l2' = getAdress l2
+transIR ((COND opT t1 t2 l1 l2):remainder) | nextLabel remainder l2 = case opT of EQ t -> case t of "Integer" -> ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ (transIR remainder)
+                                                                                  NE t -> case t of "Integer" -> ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1f " ++ l1'] ++ (transIR remainder)
+                                                                                  LT t -> case t of "Integer" -> ["blt " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.lt.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ (transIR remainder)
+                                                                                  LE t -> case t of "Integer" -> ["ble " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.le.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ (transIR remainder)
+                                           | nextLabel remainder l1 = case opT of EQ t -> case t of "Integer" -> ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1f " ++ l2'] ++ (transIR remainder)
+                                                                                  NE t -> case t of "Integer" -> ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l2'] ++ (transIR remainder)
+                                                                                  LT t -> case t of "Integer" -> ["bge " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.lt.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1f " ++ l2'] ++ (transIR remainder)
+                                                                                  LE t -> case t of "Integer" -> ["bgt " ++ t1' ++ "," ++ t2' ++ "," ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.le.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1f " ++ l2'] ++ (transIR remainder)
+                                           | otherwise              = case opT of EQ t -> case t of "Integer" -> ["beq " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ t1'] ++ ["j " ++ t2'] ++ (transIR remainder)
+                                                                                  NE t -> case t of "Integer" -> ["bne " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.eq.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1f " ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                  LT t -> case t of "Integer" -> ["blt " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.lt.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                  LE t -> case t of "Integer" -> ["ble " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                                    "Float"   -> ["c.le.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
+                                                                                  where t1' = getAdress t1
+                                                                                  t2' = getAdress t2
+                                                                                  l1' = getAdress l1
+                                                                                  l2' = getAdress l2
 transIR ((LABEL l):remainder) = [l ++ ":"] ++ (transIR remainder)
 transIR ((JUMP l):remainder) = ["j " ++ l] ++ (transIR remainder)
-transIR ((OP ADD t t1 t2 t3):remainder) = ["add " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
-transIR ((OP SUB t t1 t2 t3):remainder) = ["sub " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
-transIR ((OP MUL t t1 t2 t3):remainder) = ["mul " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
-transIR ((OP DIV t t1 t2 t3):remainder) = ["div " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+transIR ((OP opT t1 t2 t3):remainder) = case opT of ADD t -> case t of "Integer" -> ["add " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+                                                                       "Float"   -> ["add.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
+                                                    SUB t -> case t of "Integer" -> ["sub " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+                                                                       "Float"   -> ["sub.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
+                                                    MUL t -> case t of "Integer" -> ["mul " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+                                                                       "Float"   -> ["mul.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
+                                                    DIV t -> case t of "Integer" -> ["div " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
+                                                                       "Float"   -> ["add.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
+                                                    where t1' = getAdress t1
+                                                          t2' = getAdress t2
+                                                          l3' = getAdress l3
 transIR ((MOVE t1 t2):remainder) = ["move " ++ t1 ++ "," ++ t2] ++ (transIR remainder)
 transIR ((MOVEI t1 k):remainder) = ["li " ++ t1 ++ "," ++ k] ++ (transIR remainder)
 transIR ((PRINT t1):remainder) STACK = ["li $v0,4"] ++ ["la $a0," ++ t1] ++ ["syscall"] ++ (transIR remainder)
