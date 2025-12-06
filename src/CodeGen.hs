@@ -3,20 +3,20 @@ module CodeGen where
 import IR
 import SymbolTable
 import Control.Minad.State
-import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
 import GHC.Exts.Heap (GenClosure(value))
 
 
-data Location = Reg Temp
-              | Stack OFfset
+data Location = Reg Temp Type
+              | Stack OFfset Type
               | Heap Offset
               | Global String
 
 type Temp = String
 type Offset = Int
 type Count = (Int, Int, Int, [String], Table)
-type Table = HashMap.HashMap String Location
+type Table = Map.Map String Location
 
 newStackOffset :: Int -> State Count String
 newStackOffset n = do (offset, temp, dataCounter, dataList, table) <- get
@@ -66,7 +66,7 @@ transMips instr stringLiterals = do fillData stringLiterals
 
 fillData :: [String] -> State Count ()
 fillData [] = return ()
-fillData (str:remainder) = do dataCounter <- newData 
+fillData (str:remainder) = do dataCounter <- newData
                               addData ["str" ++ show dataCounter ++ ": .asciiz" ++ str]
                               return fillData remainder
 
@@ -75,14 +75,10 @@ defaultStringSize = 256
 
 
 getAdress :: String -> String -> State Count String
-getAdress str loc = do (_,_,_,_,table) <- get
-                       case HashMap.lookup str table of
-                         Just value -> return value
-                         Nothing -> case loc of
-                                      "Reg" ->
-                                      "Stack" -> 
-                                      "Heap" ->
-                                      "Global" -> 
+getAdress str = do (_,_,_,_,table) <- get
+                   let Just value =  HashMap.lookup str table of
+                     Just value -> eturn value
+                     as
 
 transIR :: [Instr] -> State Count [String]
 transIR [] = return []
