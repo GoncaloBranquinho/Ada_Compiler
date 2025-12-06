@@ -55,7 +55,7 @@ main = do
             let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
             let (code1, scopeTable, finishOrder) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", [], Map.empty, 0, 1, [])
             let scopeList = Map.toList scopeTable
-            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder) (0,0,0,Map.empty,Map.empty)
+            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder) (0,6,0,Map.empty,Map.empty)
             print addresses
             print scopeInfo
 

@@ -27,7 +27,7 @@ popRegI n = do (regI,regF,stackP,tbl,scpInfo) <- get
 newRegF :: State Count Reg
 newRegF = do (regI,regF,stackP,tbl,scpInfo) <- get
              put (regI, regF+1, stackP, tbl, scpInfo)
-             return (if regF < 10 then "$f" ++ show regF else "$f" ++ show (regF+10))
+             return ("$f" ++ show regF)
 
 
 popRegF :: Int -> State Count ()
@@ -76,7 +76,7 @@ allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
 allocateReg :: Int -> (String,Int,Bool) -> State Count ()
 allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                         if (regI == 19 && (not isFloat || head id == '_')) ||
-                                           (regF == 21 && (isFloat || head id == '_'))
+                                           (regF == 32 && (isFloat || head id == '_'))
                                            then allocateStack scp (id,bytes,isFloat)
                                            else do
                                                (newRegI', newRegF', tbl', scpInfo') <- 
