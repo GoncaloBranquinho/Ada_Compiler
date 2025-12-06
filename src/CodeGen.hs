@@ -74,8 +74,8 @@ defaultStringSize :: String
 defaultStringSize = 256
 
 
-getAdress :: String -> String -> State Count String
-getAdress str = do (_,_,_,_,table) <- get
+getAddress :: String -> String -> State Count String
+getAddress str = do (_,_,_,_,table) <- get
                    let Just value =  HashMap.lookup str table of
                      Just value -> eturn value
                      as
@@ -106,10 +106,10 @@ transIR ((COND opT t1 t2 l1 l2):remainder) | nextLabel remainder l2 = case opT o
                                                                                                     "Float"   -> ["c.lt.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
                                                                                   LE t -> case t of "Integer" -> ["ble " ++ t1' ++ "," ++ t2' ++ "," ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
                                                                                                     "Float"   -> ["c.le.s, " ++ t1' ++ "," ++ t2'] ++ ["bc1t " ++ l1'] ++ ["j " ++ l2'] ++ (transIR remainder)
-                                                                                  where t1' = getAdress t1
-                                                                                  t2' = getAdress t2
-                                                                                  l1' = getAdress l1
-                                                                                  l2' = getAdress l2
+                                                                                  where t1' = getAddress t1
+                                                                                        t2' = getAddress t2
+                                                                                        l1' = getAddress l1
+                                                                                        l2' = getAddress l2
 transIR ((LABEL l):remainder) = [l ++ ":"] ++ (transIR remainder)
 transIR ((JUMP l):remainder) = ["j " ++ l] ++ (transIR remainder)
 transIR ((OP opT t1 t2 t3):remainder) = case opT of ADD t -> case t of "Integer" -> ["add " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
@@ -120,15 +120,20 @@ transIR ((OP opT t1 t2 t3):remainder) = case opT of ADD t -> case t of "Integer"
                                                                        "Float"   -> ["mul.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
                                                     DIV t -> case t of "Integer" -> ["div " ++ t1 ++ "," ++ t2 ++ "," ++ t3] ++ (transIR remainder)
                                                                        "Float"   -> ["add.s " ++ f1 ++ "," ++ f2 ++ "," ++ f3] ++ (transIR remainder)
-                                                    where t1' = getAdress t1
-                                                          t2' = getAdress t2
-                                                          l3' = getAdress l3
-transIR ((MOVE t1 t2):remainder) = ["move " ++ t1 ++ "," ++ t2] ++ (transIR remainder)
-transIR ((MOVEI t1 k):remainder) = ["li " ++ t1 ++ "," ++ k] ++ (transIR remainder)
+                                                    where t1' = getAddress t1
+                                                          t2' = getAddress t2
+                                                          l3' = getAddress l3
+transIR ((MOVE t t1 t2):remainder) = case t of "Integer" -> ["move " ++ t1' ++ "," ++ t2'] ++ (transIR remainder)
+                                               "Float"   -> ["mov.s " ++ t1' ++ "," ++ t2'] ++ (transIR remainder)
+                                               where t1' = getAddress t1
+                                                     t2' = getAddress t2
+transIR ((MOVEI t1 litT):remainder) = case litT of TInt t    -> ["li " ++ t1' ++ "," ++ (show t)] ++ (transIR remainder)
+                                                   TFloat t  -> ["li.s " ++ t1' ++ "," ++ (show t)] ++ (transIR remainder)
+                                                   TString t -> ["la " ++ t1' ++ "," ++ t] ++ (transIR remainder)
+                                                   where t1' = getAddress t1
 transIR ((PRINT t1):remainder) STACK = ["li $v0,4"] ++ ["la $a0," ++ t1] ++ ["syscall"] ++ (transIR remainder)
 transIR ((PRINT t1):remainder) HEAP = ["la $a0," ++ location] ++ ["lw " ++ t1 ++ ",0($a0)"] ++ ["la $a0,strbuf"] ++ [l ++ ":"] ++ ["lb $a1,0(" ++ t1 ++ ")"] ++ ["sb $a1,0($a0)"] ++ ["addi " ++ t1 ++ "," ++ t1 ++ ",1"] ++ ["addi $a0,$a0,1"] ++ ["bne $a1,$0,l"] ++ ["li $v0,4"] ++ ["la $a0,strbuf"] ++ ["syscall"] ++ (transIR remainder)
 transIR ((READ t1 t2 l1 l2):remainder) = ["la " ++ t1 ++ "," ++ "strbuf"] ++ ["li $v0,8"] ++ ["move $a0," ++ t1] ++ ["li $a1,256"] ++ ["syscall"] ++ [l1 ++ ":"] ++ ["lb " ++ t2 ++ ",0($a0)"] ++ ["addi $a0,$a0,1"] ++ ["bne " ++ t2 ++ ",$0," ++ l1] ++ ["sub " ++ t2 ++ ",$a0," ++ t1] ++ ["move $a1,$a0"] ++ ["li $v0,9"] ++ ["move $a0," ++ t2] ++ ["syscall"] ++ [l2 ++ ":"] ++ ["lb $a0,0(" ++ t1 ++ ")"] ++ ["sb $a0,0($v0)"] ++ ["addi " ++ t1 ++ "," ++ t1 ++ ",1"] ++ ["addi $v0,$v0,1"] ++ ["bne " ++ t1 ++ ",$a1," ++ l2] ++ ["sub " ++ t1 ++ ",$v0," ++ t2] ++ ["la $a0," ++ location] ++ ["sw " ++ t1 ++ ",0($a0)"] ++ (transIR remainder)
 
--- FALTA FAZER VERSOES DIFERENTES PARA FLOAT E INT!
 -- falta escolhers registos
 -- falta fazer o decl
