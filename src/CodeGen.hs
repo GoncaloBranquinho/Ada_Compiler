@@ -42,9 +42,9 @@ nextLabel _ _ = False
 
 transMips :: [Instr] -> [String] -> State Count [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
-                                    code2 <- transIR instr
-                                    (_,_,dataList,_) <- get
-                                    return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
+                                   code2 <- transIR instr
+                                   (_,_,dataList,_) <- get
+                                   return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
 
 
 fillData :: [String] -> [Float] -> State Count ()
