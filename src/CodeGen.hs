@@ -93,7 +93,7 @@ free = do (offset,dataCounter,dataList,table,scpInfo,order) <- get
           let Just (x,y,z) = Map.lookup scp scpInfo
           let order' = tail head
           put (offset,dataCounter,dataList,table,scpInfo,order')
-          return ["addiu $sp $sp " ++ show (-z)]
+          return ["addiu $sp $sp " ++ show z]
 
 
 transIR :: [Instr] -> State Counter [String]
@@ -140,7 +140,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do let typ = convertBinOp opT
                                                                    "Float"   -> ["add.s " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
                                              SUB t    -> case t of "Integer" -> ["sub " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
                                                                    "Float"   -> ["sub.s " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
-                                             MULT t    -> case t of "Integer" -> ["mul " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
+                                             MULT t   -> case t of "Integer" -> ["mul " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
                                                                     "Float"   -> ["mul.s " ++ f1' ++ "," ++ f2' ++ "," ++ f3'] ++ (transIR remainder)
                                              DIV t    -> case t of "Integer" -> ["div " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
                                                                    "Float"   -> ["add.s " ++ t1' ++ "," ++ t2' ++ "," ++ t3'] ++ (transIR remainder)
