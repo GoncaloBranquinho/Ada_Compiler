@@ -5,7 +5,6 @@ import Control.Monad.State
 data Location = RegI Reg
               | RegF Reg
               | Stack Offset
-              | Heap OFfset
               | Global String
               deriving (Show,Eq)
 
