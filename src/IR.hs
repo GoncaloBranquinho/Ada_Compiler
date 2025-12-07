@@ -21,8 +21,8 @@ data Instr = MOVE String Temp Temp
            | END
     deriving (Show, Eq)
 
-data BinOp = ADD String | SUB String | MULT String | DIV String | POW String | AND
-            | OR | XOR | EQ String | NE String | LT String | LE String | CONCAT
+data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
+            | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT
     deriving (Show, Eq)
 
 data Literal = TInt Int | TDouble Float | TString String
