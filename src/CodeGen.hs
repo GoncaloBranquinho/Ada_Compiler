@@ -173,6 +173,4 @@ transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getAddress t1 "String"
 -- falta fazer o decl
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
 -- criar um data type para a heap, que nos diz onde esta cada variavel do tipo string
--- meter return onde falta 
-
- 
+-- meter return onde falta
