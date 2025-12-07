@@ -2,65 +2,48 @@ module CodeGen where
 
 import IR
 import SymbolTable
-import Control.Minad.State
+import Control.Monad.State
 import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
 import GHC.Exts.Heap (GenClosure(value))
 
 
-data Location = Reg Temp Type
-              | Stack OFfset Type
-              | Heap Offset
-              | Global String
-
 type Temp = String
 type Offset = Int
-type Count = (Int, Int, Int, [String], Table)
+type Count = (Int, Int, [String], Table)
 type Table = Map.Map String Location
 
 newStackOffset :: Int -> State Count String
-newStackOffset n = do (offset, temp, dataCounter, dataList, table) <- get
-                      put (offset + n, temp, dataCounter, dataList, table)
+newStackOffset n = do (offset, dataCounter, dataList, table) <- get
+                      put (offset + n, dataCounter, dataList, table)
                       return offset
 
-newTemp :: State Count Temp
-newTemp = do (offset, temp, dataCounter, dataList, table) <- get
-             put (offset, temp + 1, dataCounter, dataList, table)
-             return (if (temp < 10) then ("t" ++ (show temp)) else ("s" ++ (show (temp - 10))))
-
 newData :: State Count Int
-newData = do (offset, temp, dataCounter, dataList, table) <- get
-             put (offset, temp, dataCounter+1, dataList, table)
+newData = do (offset, dataCounter, dataList, table) <- get
+             put (offset, dataCounter+1, dataList, table)
              return (dataCounter)
 
 addData :: String -> State Count ()
-addData str = do (offset, temp, dataCounter, dataList, table) <- get
-                 put (offset, temp, dataCounter, dataList ++ str, table)
+addData str = do (offset, dataCounter, dataList, table) <- get
+                 put (offset, dataCounter, dataList ++ str, table)
 
 popStackOffset :: Int -> State Count ()
-popStackOffset n = do (offset, temp, dataCounter, dataList, table) <- get
-                      put (offset - n, temp, dataCounter, dataList, table)
-
-popTemp :: State Count ()
-popTemp = do (offset, temp, dataCounter, dataList, table) <- get
-             put (offset, temp - 1, dataCounter, dataList, table)
+popStackOffset n = do (offset, dataCounter, dataList, table) <- get
+                      put (offset - n, dataCounter, dataList, table)
 
 getTable :: State Count Table
 getTable = do (_,_,_,_,table) <- get
               return table
 
-addTable :: String -> Location -> State Count ()
-addTable x y = do (offset, temp, dataCounter, dataList, table) <- get
-                  put (offset, temp, dataCounter, dataList, HashMap.insert x y table) 
 
 nextLabel :: [Instr] -> String -> Bool
 nextLabel (LABEL l1 :_) l2 = l1 == l2
 nextLabel _ _ = False
 
 transMips :: [Instr] -> [String] -> State Count [String]
-transMips instr stringLiterals = do fillData stringLiterals
+transMips instr strLit fltLit = do fillData strLit fltLit
                                     code2 <- transIR instr
-                                    (_,_,_,dataList) <- get
+                                    (_,_,dataList,_) <- get
                                     return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
 
 
@@ -79,9 +62,8 @@ defaultStringSize = 256
 
 getAddress :: String -> String -> State Count String
 getAddress str = do (_,_,_,_,table) <- get
-                   let Just value =  HashMap.lookup str table of
-                     Just value -> eturn value
-                     as
+                    let Just value =  HashMap.lookup str table
+                    
 
 transIR :: [Instr] -> State Count [String]
 transIR [] = return []
