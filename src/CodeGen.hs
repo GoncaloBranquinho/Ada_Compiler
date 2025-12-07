@@ -9,31 +9,31 @@ import GHC.Exts.Heap (GenClosure(value))
 import MemoryAllocator
 
 type Offset = Int
-type Counter = (Int, Int, [String], Table)
-type Adresses = Map.Map String [Location]
-type ScpInfo = Map.Map Int (Int,Int,Int)
+type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int])
+type Addresses = Map.Map String [Location]
+
 
 newStackOffset :: Int -> State Counter String
-newStackOffset n = do (offset, dataCounter, dataList, table) <- get
-                      put (offset + n, dataCounter, dataList, table)
+newStackOffset n = do (offset, dataCounter, dataList, table,scpInfo, order) <- get
+                      put (offset + n, dataCounter, dataList, table,scpInfo,order)
                       return offset
 
 
 popStackOffset :: Int -> State Counter ()
-popStackOffset n = do (offset, dataCounter, dataList, table) <- get
-                      put (offset - n, dataCounter, dataList, table)
+popStackOffset n = do (offset, dataCounter, dataList, table,scpInfo,order) <- get
+                      put (offset - n, dataCounter, dataList, table,scpInfo,order)
 
 newData :: State Counter Int
-newData = do (offset, dataCounter, dataList, table) <- get
-             put (offset, dataCounter+1, dataList, table)
+newData = do (offset, dataCounter, dataList, table,scpInfo,order) <- get
+             put (offset, dataCounter+1, dataList, table,scpInfo,order)
              return (dataCounter)
 
 addData :: String -> State Counter ()
-addData str = do (offset, dataCounter, dataList, table) <- get
-                 put (offset, dataCounter, dataList ++ str, table)
+addData str = do (offset, dataCounter, dataList, table,scpInfo,order) <- get
+                 put (offset, dataCounter, dataList ++ str, table,scpInfo,order)
 
-getTable :: State Counter Table
-getTable = do (_,_,_,_,table) <- get
+getTable :: State Counter Addresses
+getTable = do (_,_,_,table,_,_) <- get
               return table
 
 
@@ -44,7 +44,7 @@ nextLabel _ _ = False
 transMips :: [Instr] -> [String] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
-                                   (_,_,dataList,_) <- get
+                                   (_,_,dataList,_,_,_) <- get
                                    return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
 
 
@@ -68,22 +68,34 @@ convertTyp (TString x) = "String"
 
 convertBinOp :: BinOp -> String
 convertBinOp op = case op of
-                      ADD t  -> t
-                      SUB t  -> t
-                      MULT t -> t
-                      DIV t  -> t
-                      POW t  -> t
-                      IR.EQ t   -> t
-                      IR.NE t   -> t
-                      IR.LT t   -> t
-                      IR.LE t   -> t
+                      ADD t   -> t
+                      SUB t   -> t
+                      MULT t  -> t
+                      DIV t   -> t
+                      POW t   -> t
+                      IR.EQ t -> t
+                      IR.NE t -> t
+                      IR.LT t -> t
+                      IR.LE t -> t
+
+
 
 getAddress :: String -> String -> State Counter Location
-getAddress str typ = do (_,_,_,_,table) <- get
+getAddress str typ = do (_,_,_,_,table,_) <- get
                         let Just value = Map.lookup str table
                         if length value == 1 then return head value else case typ of
                                                                               "Integer" -> return head value
-                                                                              "Float" -> return tail value
+                                                                              "Float" -> return last value
+
+free :: State Counter [String]
+free = do (offset,dataCounter,dataList,table,scpInfo,order) <- get
+          let scp = head order
+          let Just (x,y,z) = Map.lookup scp scpInfo
+          let order' = tail head
+          put (offset,dataCounter,dataList,table,scpInfo,order')
+          return ["addiu $sp $sp " ++ show (-z)]
+
+
 transIR :: [Instr] -> State Counter [String]
 transIR [] = return []
 transIR ((COND opT t1 t2 l1 l2):remainder) = do let typ = convertBinOp opT
@@ -143,14 +155,19 @@ transIR ((MOVE t t1 t2):remainder) = do t1' <- getAddress t1 t
                                                   "Float"   -> ["mov.s " ++ t1' ++ "," ++ t2'] ++ (transIR remainder)
 
 transIR ((MOVEI t1 litT):remainder) = do let typ = convertTyp litT
-                                         t1' <. getAddress t1 typ
+                                         t1' <- getAddress t1 typ
                                          t <- if typ == "Integer" then return "Integer" else getAddress t (typ)
                                          case litT of TInt t    -> ["li " ++ t1' ++ "," ++ (show t)] ++ (transIR remainder)
-                                                      TDouble t  -> ["li.s " ++ t1' ++ "," ++ (show t)] ++ (transIR remainder)
+                                                      TDouble t -> ["li.s " ++ t1' ++ "," ++ (show t)] ++ (transIR remainder)
                                                       TString t -> ["la " ++ t1' ++ "," ++ t] ++ (transIR remainder)
 
-
-
+transIR (BEGIN:remainder) = transIR remainder
+transIR (END:remainder) = do code1 <- free
+                             code2 <- transIR remainder
+                             return (code1 ++ code2)
+transIR ((DECL id typ):remainder) = do case typ of 
+                                         "String" -> transIR remainder -- falta alocar espaço na heap para id, antes de chamar transIR
+                                         _        -> transIR remainder
 
 
 
@@ -178,3 +195,5 @@ transIR ((READ t1 t2 l1 l2):remainder) = ["la " ++ t1' ++ "," ++ "strbuf"] ++ ["
 -- falta escolhers registos
 -- falta fazer o decl
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
+-- criar um data type para a heap, que nos diz onde esta cada variavel do tipo string
+-- meter return onde falta 
