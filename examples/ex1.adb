@@ -5,6 +5,6 @@ procedure Main is
   k : String;
 begin
   Get_Line(k,z);
-  y := 1.0 + 2.1;
+  y := 1.0 + 2.1 + x;
 end Main;
 

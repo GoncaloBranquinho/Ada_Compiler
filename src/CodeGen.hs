@@ -64,11 +64,14 @@ transMips instr stringLiterals = do fillData stringLiterals
                                     return ([".data"] ++ [dataList] ++ [".text", "main:",code2])
 
 
-fillData :: [String] -> State Count ()
-fillData [] = return ()
-fillData (str:remainder) = do dataCounter <- newData
-                              addData ["str" ++ show dataCounter ++ ": .asciiz" ++ str]
-                              return fillData remainder
+fillData :: [String] -> [Float] -> State Count ()
+fillData [] [] = return ()
+fillData [] (flt:remainder) = do dataCounter <- newData
+                                 addData ["flt" ++ show dataCounter ++ ": .float " ++ flt]
+                                 return fillData [] flt
+fillData (str:remainder) flt = do dataCounter <- newData
+                                  addData ["str" ++ show dataCounter ++ ": .asciiz " ++ "\"" ++ str ++ "\""]
+                                  return fillData remainder flt
 
 defaultStringSize :: String
 defaultStringSize = 256

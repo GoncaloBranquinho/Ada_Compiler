@@ -25,7 +25,7 @@ data BinOp = ADD String | SUB String | MULT String | DIV String | POW String | A
             | OR | XOR | EQ String | NE String | LT String | LE String | CONCAT
     deriving (Show, Eq)
 
-data Literal = TInt Int | TDouble Double | TString String
+data Literal = TInt Int | TDouble Float | TString String
     deriving (Show, Eq)
 
 --instance Show Literal where
@@ -36,7 +36,7 @@ data Literal = TInt Int | TDouble Double | TString String
 type Temp = String
 type Label = String
 type Table = Map.Map Int [(String,Int,Bool)]
-type Count = (Int,Int,Int,String,[String], Table, Int, Int, [Int])
+type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int])
 
 typeToString :: Type -> String
 typeToString TypeInteger = "Integer"
@@ -108,10 +108,20 @@ exitScope parentScope = do (temps,labels,scope,typ,setString, table,_,nextScopeM
 
 
 addSet :: String -> State Count ()
-addSet str = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder) <- get
+addSet str = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder) <- get
                 if (elem str setString)
                   then return ()
-                  else put (temps,labels,scope,typ, setString ++ [str], table,currScopeMips, nextScopeMips, finishOrder)
+                  else put (temps,labels,scope,typ, (setString ++ [str],setFloat), table, currScopeMips, nextScopeMips, finishOrder)
+addSetFloat :: Float -> State Count ()
+addSetFloat num = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder) <- get
+                     if (elem num setFloat)
+                        then return ()
+                        else put (temps,labels,scope,typ, (setString,setFloat++[num]), table, currScopeMips, nextScopeMips, finishOrder)
+
+
+
+
+
 
 
 addTable :: String -> Int -> Bool -> State Count ()
@@ -157,12 +167,12 @@ searchID id1 ((temp,(typ,_)):rest) = do let id2 = takeWhile (\x -> x /= '@') tem
                                           else 
                                               searchID id1 rest
 
-transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int])
+transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int],[String],[Float])
 transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
-                                     (_,_,_,_,_,table,_,_, finishOrder) <- get
-                                     return ([IR.BEGIN] ++ (code1 ++ code2) ++ [IR.END],table, finishOrder)
+                                     (_,_,_,_,(setStr,setFlt),table,_,_, finishOrder) <- get
+                                     return ([IR.BEGIN] ++ (code1 ++ code2) ++ [IR.END],table, finishOrder,setStr,setFlt)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -306,6 +316,7 @@ transExp FalseLit table dest = do newTyp "Boolean"
 transExp (IntLit num) table dest = do newTyp "Integer"
                                       return [MOVEI dest (TInt num)]
 transExp (FloatLit num) table dest = do newTyp "Float"
+                                        addSetFloat num
                                         return [MOVEI dest (TDouble num)]
 transExp (StringLit num) table dest = do newTyp "String"
                                          addSet num

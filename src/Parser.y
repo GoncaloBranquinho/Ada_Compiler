@@ -181,7 +181,7 @@ data Exec = Assign String Exp
 data Exp = TrueLit
          | FalseLit
          | IntLit Int
-         | FloatLit Double
+         | FloatLit Float
          | Var String
          | StringLit String
          | Add Exp Exp

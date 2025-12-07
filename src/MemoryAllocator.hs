@@ -5,6 +5,7 @@ import Control.Monad.State
 data Location = RegI Reg
               | RegF Reg
               | Stack Offset
+              | Global String
               deriving (Show,Eq)
 
 type Reg = String
@@ -27,7 +28,7 @@ popRegI n = do (regI,regF,stackP,tbl,scpInfo) <- get
 newRegF :: State Count Reg
 newRegF = do (regI,regF,stackP,tbl,scpInfo) <- get
              put (regI, regF+1, stackP, tbl, scpInfo)
-             return ("$f" ++ show regF)
+             return (if regF < 12 then "$f" ++ show regF else "$f" ++ show (regF + 4)) 
 
 
 popRegF :: Int -> State Count ()
@@ -52,20 +53,33 @@ deallocate scp = do (_,_,_,_,scpInfo) <- get
                     popStackP scpStackP
 
 
-allocate :: TableIR -> [Int] -> State Count (Adresses,ScpInfo)
-allocate [] [] = do (_,_,_,tbl,scpInfo) <- get
-                    return (tbl,scpInfo)
-allocate [] (scp:scps) = do deallocate scp
-                            allocate [] scps
+allocate :: TableIR -> [Int] -> [String] -> [Float] -> State Count (Adresses,ScpInfo)
+allocate [] [] strs flts = do allocateLits strs flts 0
+                              (_,_,_,tbl,scpInfo) <- get
+                              return (tbl,scpInfo)
+allocate [] (scp:scps) xs ys = do deallocate scp
+                                  allocate [] scps xs ys
 
-allocate ((scp, content):remainder) (scp':nextScps) = do allocateScope scp content
-                                                         if scp == scp'
-                                                             then deallocate scp
-                                                             else return ()
-                                                         let scps = if scp == scp'
-                                                                        then nextScps
-                                                                        else scp':nextScps
-                                                         allocate remainder scps
+allocate ((scp, content):remainder) (scp':nextScps) xs ys = do allocateScope scp content
+                                                               if scp == scp'
+                                                                 then deallocate scp
+                                                                 else return ()
+                                                               let scps = if scp == scp'
+                                                                            then nextScps
+                                                                            else scp':nextScps
+                                                               allocate remainder scps xs ys
+
+allocateLits :: [String] -> [Float] -> Int -> State Count ()
+allocateLits [] [] _ = return ()
+allocateLits [] (flt:flts) n = do (regI,regF,stackP,tbl,scpInfo) <- get
+                                  let tbl' = Map.insertWith (++) (show flt) [Global ("flt" ++ show n)] tbl
+                                  put (regI,regF,stackP,tbl',scpInfo)
+                                  allocateLits [] flts (n+1)
+allocateLits (str:strs) flts n = do (regI,regF,stackP,tbl,scpInfo) <- get
+                                    let tbl' = Map.insertWith (++) str [Global ("str" ++ show n)] tbl
+                                    put (regI,regF,stackP,tbl',scpInfo)
+                                    allocateLits strs flts (n+1)
+
 allocateScope :: Int -> [(String,Int,Bool)] -> State Count ()
 allocateScope _ [] = return ()
 allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
@@ -76,7 +90,7 @@ allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
 allocateReg :: Int -> (String,Int,Bool) -> State Count ()
 allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                         if (regI == 19 && (not isFloat || head id == '_')) ||
-                                           (regF == 32 && (isFloat || head id == '_'))
+                                           (regF == 29 && (isFloat || head id == '_'))
                                            then allocateStack scp (id,bytes,isFloat)
                                            else do
                                                (newRegI', newRegF', tbl', scpInfo') <- 

@@ -109,7 +109,7 @@ data Token = MAIN
            | STRING_LITERAL String
            | ID String
            | INTEGER_LITERAL Int
-           | FLOAT_LITERAL Double
+           | FLOAT_LITERAL Float
     deriving (Eq, Show)
 
 alexScanTokensInsensitive :: String -> [Token]
