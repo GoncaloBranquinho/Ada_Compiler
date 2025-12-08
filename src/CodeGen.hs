@@ -7,13 +7,14 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
 import GHC.Exts.Heap (GenClosure(value))
 import MemoryAllocator
+import Distribution.Simple.Utils (xargs)
 
 type Offset = Int
 type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int], Content)
 type Addresses = Map.Map String [Location]
 type Content = Map.Map String ValueInfo
 
-data ValueInfo = Value | HeapP Location | DataP Location | Concat ValueInfo ValueInfo
+data ValueInfo = Value | HeapP Location | DataP Location | Concat [ValueInfo]
         deriving (Show,Eq)
 
 
@@ -166,9 +167,15 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t2'' <- getAddress t2'
                                            t3'' <- getAddress t3'
                                            case opT of
-                                                    CONCAT -> do t2''' <- getContent t2''
-                                                                 t3''' <- getContent t3''
-                                                                 changeContent t1'' (Concat t2''' t3''')
+                                                    CONCAT -> do t2'''  <- getContent t2''
+                                                                 t3'''  <- getContent t3''
+                                                                 t2'''' <- case t2''' of 
+                                                                                      Concat xs -> return xs
+                                                                                      _         -> return [t2''']
+                                                                 t3'''' <- case t3''' of
+                                                                                      Concat xs -> return xs
+                                                                                      _         -> return [t2''']
+                                                                 changeContent t1'' (Concat t2'''' t3'''')
                                                     _      -> do changeContent t1'' Value
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
