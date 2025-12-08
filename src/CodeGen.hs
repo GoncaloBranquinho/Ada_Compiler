@@ -18,6 +18,7 @@ data ValueInfo = Value | HeapP Location | DataP Location | Concat [ValueInfo]
         deriving (Show,Eq)
 
 
+
 newStackOffset :: Int -> State Counter Int
 newStackOffset n = do (offset, dataCounter, dataList, table, scpInfo, order,content) <- get
                       put (offset + n, dataCounter, dataList, table, scpInfo, order,content)
@@ -169,7 +170,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            case opT of
                                                     CONCAT -> do t2'''  <- getContent t2''
                                                                  t3'''  <- getContent t3''
-                                                                 t2'''' <- case t2''' of 
+                                                                 t2'''' <- case t2''' of
                                                                                       Concat xs -> return xs
                                                                                       _         -> return [t2''']
                                                                  t3'''' <- case t3''' of
@@ -291,7 +292,7 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2' <- if (convertedT == "Integer") then (return (RegI "")) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
-                                         let typeOfValue = if convertedT == "Integer" then Value else (DataP t2')
+                                         let typeOfValue = if convertedT == "Integer" then Value else (if convertedT == "Float" then (DataP t2') else (Concat [DataP t2']))
                                          changeContent t1'' typeOfValue
                                          let instrExecute = case (litT, t1') of 
                                                                              (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
@@ -313,7 +314,7 @@ transIR ((READ t1 t2 l1 l2):remainder) = do t1' <- getLocation t1 "String"
                                             t2' <- getLocation t2 "Integer"
                                             t1'' <- getAddress t1'
                                             t2'' <- getAddress t2'
-                                            changeContent t1'' HeapP t1'
+                                            changeContent t1'' (Concat [HeapP t1'])
                                             changeContent t2'' Value t2'
                                             let instrExecute = case (t1', t2') of
                                                                                (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
