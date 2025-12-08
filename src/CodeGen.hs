@@ -169,7 +169,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                     CONCAT -> do t2''' <- getContent t2''
                                                                  t3''' <- getContent t3''
                                                                  changeContent t1'' (Concat t2''' t3''')
-                                                    _      ->    changeContent t1'' Value
+                                                    _      -> do changeContent t1'' Value
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
@@ -318,8 +318,6 @@ transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
 
 transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
                                          t1'' <- getAddress t1'
-                                          
-
 
 
 {-
