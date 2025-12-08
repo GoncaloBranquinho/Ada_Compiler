@@ -99,10 +99,10 @@ getContent id = do (_,_,_,_,_,_,content) <- get
 free :: State Counter [String]
 free = do (offset, dataCounter, dataList, table, scpInfo, order, content) <- get
           let scp = head order
-          let Just (x, y, z) = Map.lookup scp scpInfo
+          let (x, y, z) = Map.findWithDefault (0,0,0) scp scpInfo
           let order' = tail order
           put (offset, dataCounter, dataList, table, scpInfo, order', content)
-          return ["addiu $sp, $sp, " ++ show z]
+          return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show z])
 
 transIR :: [Instr] -> State Counter [String]
 transIR [] = return []
@@ -212,14 +212,13 @@ transIR ((MOVEI t1 (litT t)):remainder) = do t1' <- getAddress t1 convertedT
                                              t2' <- getAddress (if convertedT == "String" then t else (show t)) convertedT
                                              t1'' <- extractAddress t1'
                                              t2'' <- extractAddress t2'
-                                             let instr =
-                                                case litT of
-                                                  TInt t    -> do changeContent t1'' Value
-                                                                  ["li " ++ t1'' ++ ", " ++ (show t)]
-                                                  TFloat t  -> do changeContent t1'' DataP
-                                                                  ["lwc1 " ++ t1'' ++ ", " ++ t2'']
-                                                  TString t -> do changeContent t1'' DataP
-                                                                  ["la " ++ t1'' ++ ", " ++ t2'']
+                                             let instr = case litT of
+                                                           TInt t    -> do changeContent t1'' Value
+                                                                           ["li " ++ t1'' ++ ", " ++ (show t)]
+                                                           TFloat t  -> do changeContent t1'' DataP
+                                                                           ["lwc1 " ++ t1'' ++ ", " ++ t2'']
+                                                           TString t -> do changeContent t1'' DataP
+                                                                           ["la " ++ t1'' ++ ", " ++ t2'']
                                              code1 <- transIR remainder
                                              return (instr ++ code1)
     where convertedT = let litT = (lit t) in ((\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT)
