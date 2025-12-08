@@ -302,10 +302,23 @@ transIR (END:remainder) = do code1 <- free
                              code2 <- transIR remainder
                              return (code1 ++ code2)
 
+transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
+                                         t2' <- getLocation t2 "Integer"
+                                         t1'' <- getAddress t1'
+                                         t2'' <- getAddress t2'
+                                         changeContent t1'' HeapP
+                                         changeContent t2'' Value
+                                         let instrExecute = case (t1', t2') of
+                                                                     (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
+                                                                     (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
+                                                                     (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                                                     (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                         instrNext <- transIR remainder
+                                         return (instrExecute ++ instrNext)
 
-
-
- 
+transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
+                                         t1'' <- getAddress t1'
+                                          
 
 
 
@@ -320,19 +333,7 @@ transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
 
 
 
-transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
-                                         t2' <- getLocation t2 "Integer"
-                                         t1'' <- getAddress t1'
-                                         t2'' <- getAddress t2'
-                                         changeContent t1'' HeapP
-                                         changeContent t2'' Value
-                                         let instrExecute = case (t1', t2') of
-                                                                     (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
-                                                                     (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
-                                                                     (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-                                                                     (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-                                         instrNext <- transIR remainder
-                                         return (instrExecute ++ instrNext)
+
 -- falta fazer o decl
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
 -- meter return onde falta
