@@ -47,8 +47,8 @@ main = do
             let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
             let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
             mapM_ print code1
-            print scopeTable
-            print finishOrder
+            --print scopeTable
+            --print finishOrder
 
         [txt, "6"] -> do
             input <- readFile txt 

@@ -182,21 +182,19 @@ transDecl (DeclComp decl1 decl2) table = do code1 <- transDecl decl1 table
 transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             let offset = typeToOffset typ
                                             let isFloat = typ == TypeFloat
-                                            mapM_ (\id -> addTable id offset isFloat) idsList --(if typ /= TypeString then idsList else [])
+                                            mapM_ (\id -> addTable id offset isFloat) idsList
                                             t1 <- newTemp
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
-                                            let decls = map (\v -> DECL v typString) idsList
                                             let newTyp = typeToString typ
                                             let moves = map (\v -> MOVE newTyp v t1) idsList
                                             popTemp 1
-                                            return (decls ++ code1 ++ moves)
+                                            return (code1 ++ moves)
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            let offset = typeToOffset typ
                                            let isFloat = typ == TypeFloat
                                            mapM_ (\id -> addTable id offset isFloat) idsList
-                                           let typString = typeToString typ
-                                           return (concatMap (\v -> [DECL v typString]) idsList)
+                                           return []
 
 
 transDeclVar :: DeclVar -> (SymTab, ScopeMem) -> State Count [Temp]
