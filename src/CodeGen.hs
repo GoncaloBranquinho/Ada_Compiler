@@ -12,10 +12,10 @@ import Distribution.Simple.Utils (xargs)
 type Offset = Int
 type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int], Content)
 type Addresses = Map.Map String [Location]
+type ValueInfo = [Location]
 type Content = Map.Map String ValueInfo
 
-data ValueInfo = Value | HeapP Location | DataP Location | Concat [ValueInfo]
-        deriving (Show,Eq)
+
 
 
 
@@ -98,7 +98,9 @@ changeContent id val = do (offset, dataCounter, dataList, table, scpInfo, order,
 
 getContent :: String -> State Counter ValueInfo
 getContent id = do (_,_,_,_,_,_,content) <- get
-                   return (content Map.! id)
+                   let val = Map.findWithDefault [] id content
+                   return val
+
 
 
 free :: State Counter [String]
@@ -167,17 +169,9 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t1'' <- getAddress t1'
                                            t2'' <- getAddress t2'
                                            t3'' <- getAddress t3'
-                                           case opT of
-                                                    CONCAT -> do t2'''  <- getContent t2''
-                                                                 t3'''  <- getContent t3''
-                                                                 t2'''' <- case t2''' of
-                                                                                      Concat xs -> return xs
-                                                                                      _         -> return [t2''']
-                                                                 t3'''' <- case t3''' of
-                                                                                      Concat xs -> return xs
-                                                                                      _         -> return [t2''']
-                                                                 changeContent t1'' (Concat t2'''' t3'''')
-                                                    _      -> do changeContent t1'' Value
+                                           t2''' <- getContent t2''
+                                           t3''' <- getContent t3''
+                                           changeContent t1'' (t2''' ++ t3''')
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
@@ -292,9 +286,8 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2' <- if (convertedT == "Integer") then (return (RegI "")) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
-                                         let typeOfValue = if convertedT == "Integer" then Value else (if convertedT == "Float" then (DataP t2') else (Concat [DataP t2']))
-                                         changeContent t1'' typeOfValue
-                                         let instrExecute = case (litT, t1') of 
+                                         if convertedT == "String" then (changeContent t1'' [t1']) else return ()
+                                         let instrExecute = case (litT, t1') of
                                                                              (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
                                                                              (TInt t, RegI _)     -> ["li " ++ t1'' ++ ", " ++ t2'']
                                                                              (TDouble t, Stack _) -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
@@ -310,105 +303,32 @@ transIR (END:remainder) = do code1 <- free
                              code2 <- transIR remainder
                              return (code1 ++ code2)
 
-transIR ((READ t1 t2 l1 l2):remainder) = do t1' <- getLocation t1 "String"
-                                            t2' <- getLocation t2 "Integer"
-                                            t1'' <- getAddress t1'
-                                            t2'' <- getAddress t2'
-                                            changeContent t1'' (Concat [HeapP t1'])
-                                            changeContent t2'' Value t2'
-                                            let instrExecute = case (t1', t2') of
-                                                                               (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
-                                                                               (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
-                                                                               (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-                                                                               (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-                                            instrNext <- transIR remainder
-                                            return (instrExecute ++ instrNext)
-
---transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
-  --                                       t1'' <- getAddress t1'
-
-
-{-
-transIR ((PRINT t1):remainder) STACK = do t1' <- getLocation t1 "String"
-                                          ["li $v0, 4"] ++ ["la $a0, " ++ t1'] ++ ["syscall"] ++ (transIR remainder)
-transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
-                                         t2' <- getLocation t2 "String"
-                                         t3' <- getLocation t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
-                                         ["la $a0, " ++ t2'] ++ ["lw " ++ t1' ++ ", 0($a0)"] ++ ["la $a0, strbuf"] ++ [l ++ ":"] ++ ["lb $a1, 0(" ++ t1' ++ ")"] ++ ["sb $a1, 0($a0)"] ++ ["addi " ++ t1' ++ ", " ++ t1' ++ ", 1"] ++ ["addi $a0, $a0, 1"] ++ ["bne $a1, $0, l"] ++ ["li $v0, 4"] ++ ["la $a0, strbuf"] ++ ["syscall"] ++ (transIR remainder)
+transIR ((READ t1 t2):remainder) = do t1' <- getLocation t1 "String"
+                                      t2' <- getLocation t2 "Integer"
+                                      t1'' <- getAddress t1'
+                                      t2'' <- getAddress t2'
+                                      changeContent t1'' [t1']
+                                      let instrExecute = case (t1', t2') of
+                                                                         (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
+                                                                         (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
+                                                                         (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                                                         (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                      instrNext <- transIR remainder
+                                      return (instrExecute ++ instrNext)
 
 
 
+transIR ((PRINT t1):remainder) = do t1' <- getLocation t1 "String"
+                                    t1'' <- getAddress t1'
+                                    t1''' <- getContent t1''
+                                    let instrExec = printMultiple t1'''
+                                    instrNext <- transIR remainder
+                                    return (instrExec ++ ["jal put_line"] ++ instrNext)
+
+printMultiple :: [Location] -> [String]
+printMultiple [] = []
+printMultiple (x:xs) = case x of
+                              RegI t1  -> ["li $v0, 4"] ++ ["move $a0, " ++ t1] ++ ["syscall"]
+                              Stack t1 -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1) ++ "($sp)"] ++ ["syscall"]
 
 
--- falta fazer o decl
--- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
--- meter return onde falta
-
-
-
-
-
-PRINT:
-
-extra: ["li $a1, 0"]; ["li $a1, 0"]
-
-stack t1: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["jal print"]
-
-registro t1: ["move $a0, " ++ t1] ++ ["jal print"]
-
-
-
-
-READ:
-
-stack t1, stack t2: ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
-
-registro t1, stack t2: ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
-
-stack t1, registro t2: ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-
-registro t1, registro t2: ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-
-
-
-
-POW_FLOAT:
-
-stack t1, stack t2, stack t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
-
-registro t1, stack t2, stack t3: ["mov.s $f12, " ++ t1] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
-
-stack t1, registro t2, stack t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
-
-registro t1, registro t2, stack t3: ["mov.s $f12, " ++ t1] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
-
-stack t1, stack t2, registro t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
-
-registro t1, stack t2, registro t3: ["mov.s $f12, " ++ t1] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
-
-stack t1, registro t2, registro t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
-
-registro t1, registro t2, registro t3: ["mov.s $f12, " ++ t1] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
-
-
-
-
-POW_INT
-
-stack t1, stack t2, stack t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
-
-registro t1, stack t2, stack t3: ["move $a0, " ++ t1] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
-
-stack t1, registro t2, stack t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
-
-registro t1, registro t2, stack t3: ["move $a0, " ++ t1] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
-
-stack t1, stack t2, registro t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
-
-registro t1, stack t2, registro t3: ["move $a0, " ++ t1] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
-
-stack t1, registro t2, registro t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
-
-registro t1, registro t2, registro t3: ["move $a0, " ++ t1] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
-
--}
