@@ -166,10 +166,10 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t2'' <- getAddress t2'
                                            t3'' <- getAddress t3'
                                            case (opT) of
-                                                         CONCAT _ -> t2''' <- getContent t2''
-                                                                     t3''' <- getContent t3''
-                                                                     changeContent t1'' (Concat t2''' t3''')
-                                                         _        -> changeContent t1'' Value
+                                                      CONCAT -> do t2''' <- getContent t2''
+                                                                      t3''' <- getContent t3''
+                                                                      changeContent t1'' (Concat t2''' t3''')
+                                                      _      -> do changeContent t1'' Value
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
@@ -256,7 +256,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Float", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
                                                                                                                   ("Float", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
                                                                                                                   ("Float", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                       CONCAT -> 
+                                                                       CONCAT -> []
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
     where convertedT = (\x -> val x) opT
