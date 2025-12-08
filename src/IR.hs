@@ -17,7 +17,6 @@ data Instr = MOVE String Temp Temp
            | PRINT Temp
            | READ Temp Temp
            | DECL Temp String
-           | BEGIN
            | END
     deriving (Show, Eq)
 
@@ -46,8 +45,9 @@ typeToString TypeString  = "String"
 
 typeToOffset :: Type -> Int
 typeToOffset TypeInteger = 4
-typeToOffset TypeBoolean = 1
+typeToOffset TypeBoolean = 4
 typeToOffset TypeFloat   = 4
+typeToOffset TypeString  = 4
 
 
 newTemp :: State Count Temp
@@ -172,7 +172,7 @@ transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
                                      (_,_,_,_,(setStr,setFlt),table,_,_, finishOrder) <- get
-                                     return ([IR.BEGIN] ++ (code1 ++ code2) ++ [IR.END],table, finishOrder,setStr,setFlt)
+                                     return (code1 ++ code2 ++ [IR.END],table, finishOrder,setStr,setFlt)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -182,7 +182,7 @@ transDecl (DeclComp decl1 decl2) table = do code1 <- transDecl decl1 table
 transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             let offset = typeToOffset typ
                                             let isFloat = typ == TypeFloat
-                                            mapM_ (\id -> addTable id offset isFloat) (if typ /= TypeString then idsList else [])
+                                            mapM_ (\id -> addTable id offset isFloat) idsList --(if typ /= TypeString then idsList else [])
                                             t1 <- newTemp
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
@@ -194,7 +194,7 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            let offset = typeToOffset typ
                                            let isFloat = typ == TypeFloat
-                                           mapM_ (\id -> addTable id offset isFloat) (if typ /= TypeString then idsList else [])
+                                           mapM_ (\id -> addTable id offset isFloat) idsList
                                            let typString = typeToString typ
                                            return (concatMap (\v -> [DECL v typString]) idsList)
 
@@ -275,7 +275,7 @@ transExec (DeclBlock decl exec) table = do newScope
                                            code2 <- transExec exec table
                                            addFinishOrder current
                                            exitScope parentScope
-                                           return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END])
+                                           return (code1 ++ code2 ++ [IR.END])
 transExec (Assign id exp) table = do scope <- getScope
                                      (newDest, _) <- getVarScope id (show scope) table
                                      code1 <- transExp exp table newDest

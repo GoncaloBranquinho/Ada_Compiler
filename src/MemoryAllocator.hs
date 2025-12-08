@@ -93,39 +93,39 @@ allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                            (regF == 29 && (isFloat || head id == '_'))
                                            then allocateStack scp (id,bytes,isFloat)
                                            else do
-                                               (newRegI', newRegF', tbl', scpInfo') <- 
-                                                 if head id == '_'
+                                             (newRegI', newRegF', tbl', scpInfo') <-
+                                               if head id == '_'
                                                  then do
-                                                   rI <- newRegI
-                                                   rF <- newRegF
-                                                   let tbl'' = Map.insertWith (++) id [RegI rI, RegF rF] tbl
-                                                   sInfo <- updateScp scp [1,2] 1
-                                                   return (regI+1, regF+1, tbl'', sInfo)
-                                                 else if (not isFloat)
-                                                 then do
-                                                   rI <- newRegI
-                                                   let tbl'' = Map.insertWith (++) id [RegI rI] tbl
-                                                   sInfo <- updateScp scp [1] 1
-                                                   return (regI+1, regF, tbl'', sInfo)
-                                                 else do
-                                                   rF <- newRegF
-                                                   let tbl'' = Map.insertWith (++) id [RegF rF] tbl
-                                                   sInfo <- updateScp scp [2] 1
-                                                   return (regI, regF+1, tbl'', sInfo)
-                                               put (newRegI', newRegF', stackP, tbl', scpInfo')
+                                                    rI <- newRegI
+                                                    rF <- newRegF
+                                                    let tbl'' = Map.insertWith (++) id [RegI rI, RegF rF] tbl
+                                                    sInfo <- updateScp scp [1,2] 1
+                                                    return (regI+1, regF+1, tbl'', sInfo)
+                                                  else if (not isFloat)
+                                                  then do
+                                                    rI <- newRegI
+                                                    let tbl'' = Map.insertWith (++) id [RegI rI] tbl
+                                                    sInfo <- updateScp scp [1] 1
+                                                    return (regI+1, regF, tbl'', sInfo)
+                                                  else do
+                                                    rF <- newRegF
+                                                    let tbl'' = Map.insertWith (++) id [RegF rF] tbl
+                                                    sInfo <- updateScp scp [2] 1
+                                                    return (regI, regF+1, tbl'', sInfo)
+                                             put (newRegI', newRegF', stackP, tbl', scpInfo')
 
 
 allocateStack :: Int -> (String,Int,Bool) -> State Count ()
 allocateStack scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                           sInfo <- updateScp scp [3] bytes
-                                          let tbl' = Map.insertWith (++) id [Stack (stackP+bytes)] tbl
+                                          let tbl' = Map.insertWith (++) id [Stack (stackP)] tbl
                                           put (regI,regF,stackP+bytes,tbl',sInfo)
 
 updateScp :: Int -> [Int] -> Int -> State Count ScpInfo
 updateScp scp [] _ = do (_,_,_,_,scpInfo) <- get
                         return scpInfo
 updateScp scp (idx:idxs) bytes = do (regI,regF,stackP,tbl,scpInfo) <- get
-                                    let scpInfo' = Map.alter 
+                                    let scpInfo' = Map.alter
                                                         (\val ->
                                                             case val of
                                                               Nothing -> Just (updateIdx idx bytes (0,0,0))

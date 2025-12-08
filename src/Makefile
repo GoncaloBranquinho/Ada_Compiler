@@ -3,6 +3,7 @@ SRC_DIR = src
 BIN_DIR = bin
 EXEC = $(BIN_DIR)/ada
 SOURCES = Main.hs Lexer.hs Parser.hs PrintAST.hs SymbolTable.hs IR.hs MemoryAllocator.hs CodeGen.hs 
+
 Lexer.hs: Lexer.x
 	alex Lexer.x
 Parser.hs: Parser.y

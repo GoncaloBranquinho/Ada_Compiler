@@ -8,7 +8,7 @@ procedure Main is
             b : Integer := 3;
             x : Integer := 2;
             y : Integer := 3;
-          
+            p : String := "ola";
             begin
                 x := a+b;
                 y := a-b;
