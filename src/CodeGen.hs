@@ -216,7 +216,7 @@ transIR ((MOVEI t1 (litT t)):remainder) = do t1' <- getAddress t1 convertedT
                                              let instr = case litT of
                                                            TInt t    -> do changeContent t1'' Value
                                                                            ["li " ++ t1'' ++ ", " ++ (show t)]
-                                                           TFloat t  -> do changeContent t1'' DataP
+                                                           TDouble t  -> do changeContent t1'' DataP
                                                                            ["lwc1 " ++ t1'' ++ ", " ++ t2'']
                                                            TString t -> do changeContent t1'' DataP
                                                                            ["la " ++ t1'' ++ ", " ++ t2'']
