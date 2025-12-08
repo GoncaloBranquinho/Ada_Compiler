@@ -259,3 +259,71 @@ transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getAddress t1 "String"
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
 -- meter return onde falta
 
+
+
+{-
+
+PRINT:
+
+extra: ["li $a1, 0"]; ["li $a1, 0"]
+
+stack t1: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["jal print"]
+
+registro t1: ["move $a0, " ++ t1] ++ ["jal print"]
+
+
+
+
+READ:
+
+stack t1, stack t2: ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
+
+registro t1, stack t2: ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
+
+stack t1, registro t2: ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+
+registro t1, registro t2: ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+
+
+
+
+POW_FLOAT:
+
+stack t1, stack t2, stack t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
+
+registro t1, stack t2, stack t3: ["mov.s $f12, " ++ t1] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
+
+stack t1, registro t2, stack t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
+
+registro t1, registro t2, stack t3: ["mov.s $f12, " ++ t1] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3 ++ "($sp)"]
+
+stack t1, stack t2, registro t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
+
+registro t1, stack t2, registro t3: ["mov.s $f12, " ++ t1] ++ ["l.s $f13, " ++ t2 ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
+
+stack t1, registro t2, registro t3: ["l.s $f12, " ++ t1 ++ "($sp)"] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
+
+registro t1, registro t2, registro t3: ["mov.s $f12, " ++ t1] ++ ["mov.s $f13, " ++ t2] ++ ["jal pow_float"] ++ ["mov.s " ++ t3 ++ ", $f0"]
+
+
+
+
+POW_INT
+
+stack t1, stack t2, stack t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
+
+registro t1, stack t2, stack t3: ["move $a0, " ++ t1] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
+
+stack t1, registro t2, stack t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
+
+registro t1, registro t2, stack t3: ["move $a0, " ++ t1] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3 ++ "($sp)"]
+
+stack t1, stack t2, registro t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
+
+registro t1, stack t2, registro t3: ["move $a0, " ++ t1] ++ ["lw $a1, " ++ t2 ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
+
+stack t1, registro t2, registro t3: ["lw $a0, " ++ t1 ++ "($sp)"] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
+
+registro t1, registro t2, registro t3: ["move $a0, " ++ t1] ++ ["move $a1, " ++ t2] ++ ["jal pow_int"] ++ ["move " ++ t3 ++ ", $v0"]
+
+-}
