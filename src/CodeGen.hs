@@ -13,7 +13,7 @@ type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int], Content)
 type Addresses = Map.Map String [Location]
 type Content = Map.Map String ValueInfo
 
-data ValueInfo = Value | HeapP String | DataP String | Concat ValueInfo ValueInfo
+data ValueInfo = Value | HeapP Location | DataP Location | Concat ValueInfo ValueInfo
         deriving (Show,Eq)
 
 
@@ -284,7 +284,7 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2' <- if (convertedT == "Integer") then (return (RegI "")) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
-                                         let typeOfValue = if convertedT == "Integer" then Value else (DataP t2'')
+                                         let typeOfValue = if convertedT == "Integer" then Value else (DataP t2')
                                          changeContent t1'' typeOfValue
                                          let instrExecute = case (litT, t1') of 
                                                                              (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
@@ -306,8 +306,8 @@ transIR ((READ t1 t2 l1 l2):remainder) = do t1' <- getLocation t1 "String"
                                             t2' <- getLocation t2 "Integer"
                                             t1'' <- getAddress t1'
                                             t2'' <- getAddress t2'
-                                            changeContent t1'' HeapP
-                                            changeContent t2'' Value
+                                            changeContent t1'' HeapP t1'
+                                            changeContent t2'' Value t2'
                                             let instrExecute = case (t1', t2') of
                                                                                (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
                                                                                (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
@@ -316,8 +316,8 @@ transIR ((READ t1 t2 l1 l2):remainder) = do t1' <- getLocation t1 "String"
                                             instrNext <- transIR remainder
                                             return (instrExecute ++ instrNext)
 
-transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
-                                         t1'' <- getAddress t1'
+--transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
+  --                                       t1'' <- getAddress t1'
 
 
 {-
