@@ -214,14 +214,14 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
 
 transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          let extractedT = case litT of TInt t -> (show t); TDouble t -> (show t); TString t -> t;
-                                         t2' <- if (convertedT == "Integer") then (return extractedT) else (getLocation extractedT convertedT)
+                                         t2' <- if (convertedT == "Integer") then (return (RegI "")) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
-                                         t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
+                                         t2'' <- if (convertedT == "Integer") then (return (RegI "")) else (getAddress t2')
                                          let typeOfValue = if convertedT == "Integer" then Value else DataP
                                          changeContent t1'' typeOfValue
                                          let instrExecute = case (litT, t1') of 
-                                                                             (TInt t, Stack _) -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
-                                                                             (TInt t, RegI _)  -> ["li " ++ t1'' ++ ", " ++ t2'']
+                                                                             (TInt t, Stack _)    -> ["li $a0, " ++ extractedT] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
+                                                                             (TInt t, RegI _)     -> ["li " ++ t1'' ++ ", " ++ extractedT]
                                                                              (TDouble t, Stack _) -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
                                                                              (TDouble t, RegF _)  -> ["lwc1 " ++ t1'' ++ ", " ++ t2'']                                                                                   
                                                                              (TString t, Stack _) -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
@@ -255,7 +255,17 @@ transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
 
 transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
                                          t2' <- getLocation t2 "Integer"
-                                         t3' <- getLocation t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
+                                         t1'' <- getAddress t1'
+                                         t2'' <- getAddress t2'
+                                         changeContent t1'' HeapP
+                                         changeContent t2'' Value
+                                         let instrExecute = case (t1', t2') of
+                                                                     (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
+                                                                     (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
+                                                                     (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                                                     (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                         instrNext <- transIR remainder
+                                         return (instrExecute ++ instrNext)
 -- falta fazer o decl
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
 -- meter return onde falta
