@@ -75,12 +75,12 @@ fillData (str:remainder) flt = do dataCounter <- newData
 
 getLocation :: String -> String -> State Counter Location
 getLocation str t = do (_, _, _,table,_,_,_) <- get
-                      let (Just value) = Map.lookup str table
-                      if (length value) == 1 
-                      then return (head value)
-                      else case t of
-                                  "Integer" -> return (head value)
-                                  "Float"   -> return (last value)
+                       let (Just value) = Map.lookup str table
+                       if (length value) == 1 
+                       then return (head value)
+                       else case t of
+                                   "Integer" -> return (head value)
+                                   "Float"   -> return (last value)
 
 getAddress :: Location -> State Counter String
 getAddress loc = case loc of
@@ -210,19 +210,19 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                         return (instr ++ code1)
 
 transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
-                                         t2' <- getLocation (if convertedT == "String" then t else (show t)) convertedT
+                                         let extractedT = case litT of TInt t -> (show t); TDouble t -> (show t); TString t -> t;
+                                         t2' <- if (convertedT == "Integer") then (return extractedT) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
-                                         t2'' <- getAddress t2'
-                                         let instrAllocate = case 
-                                         let instrExecute = case litT of
-                                                                      TInt t    -> do changeContent t1'' Value
-                                                                                      ["li " ++ t1'' ++ ", " ++ (show t)]
-                                                                      TDouble t -> do changeContent t1'' DataP
-                                                                                      ["lwc1 " ++ t1'' ++ ", " ++ t2'']
-                                                                      TString t -> do changeContent t1'' DataP
-                                                                                      ["la " ++ t1'' ++ ", " ++ t2'']
-                                             instrNext <- transIR remainder
-                                             return (instrAllocate ++ instrExecute ++ instrNext)
+                                         t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
+                                         instrExecute <- case litT of
+                                                                   TInt t    -> do changeContent t1'' Value
+                                                                                   return (case t1' of Stack _ -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]; RegI _ -> ["li " ++ t1'' ++ ", " ++ t2''])
+                                                                   TDouble t -> do changeContent t1'' DataP
+                                                                                   return (case t1' of Stack _ -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]; RegF _ -> ["lwc1 " ++ t1'' ++ ", " ++ t2''])
+                                                                   TString t -> do changeContent t1'' DataP
+                                                                                   return (case t1' of Stack _ -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]; RegI _ -> ["la " ++ t1'' ++ ", " ++ t2''])
+                                         instrNext <- transIR remainder
+                                         return (instrExecute ++ instrNext)
     where convertedT = (\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT
 
 
