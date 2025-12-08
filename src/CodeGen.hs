@@ -203,9 +203,15 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                         t2''  <- getAddress t2'
                                         t2''' <- getContent t2''
                                         changeContent t1'' t2'''
-                                        let instr = case t of
-                                                           "Integer" -> ["move " ++ t1'' ++ ", " ++ t2'']
-                                                           "Float"   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
+                                        let instr = case (t, t1', t2') of
+                                                           ("Float", Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
+                                                           ("Float", Stack _, RegF _)  -> ["s.s " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
+                                                           ("Float", RegF _, Stack _)  -> ["l.s " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
+                                                           ("Float", RegF _, RegF _)   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
+                                                           (_, Stack _, Stack _)       -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
+                                                           (_, Stack _, RegF _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
+                                                           (_, RegF _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
+                                                           (_, RegF _, RegF)           -> ["move " ++ t1'' ++ ", " ++ t2'']
                                         code1 <- transIR remainder
                                         return (instr ++ code1)
 
@@ -214,16 +220,18 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2' <- if (convertedT == "Integer") then (return extractedT) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
-                                         instrExecute <- case litT of
-                                                                   TInt t    -> do changeContent t1'' Value
-                                                                                   return (case t1' of Stack _ -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]; RegI _ -> ["li " ++ t1'' ++ ", " ++ t2''])
-                                                                   TDouble t -> do changeContent t1'' DataP
-                                                                                   return (case t1' of Stack _ -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]; RegF _ -> ["lwc1 " ++ t1'' ++ ", " ++ t2''])
-                                                                   TString t -> do changeContent t1'' DataP
-                                                                                   return (case t1' of Stack _ -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]; RegI _ -> ["la " ++ t1'' ++ ", " ++ t2''])
+                                         let typeOfValue = if convertedT == "Integer" then Value else DataP
+                                         changeContent t1'' typeOfValue
+                                         let instrExecute = case (litT, t1') of 
+                                                                             (TInt t, Stack _) -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
+                                                                             (TInt t, RegI _)  -> ["li " ++ t1'' ++ ", " ++ t2'']
+                                                                             (TDouble t, Stack _) -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
+                                                                             (TDouble t, RegF _)  -> ["lwc1 " ++ t1'' ++ ", " ++ t2'']                                                                                   
+                                                                             (TString t, Stack _) -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
+                                                                             (TString t, RegI _)  -> ["la " ++ t1'' ++ ", " ++ t2'']
                                          instrNext <- transIR remainder
                                          return (instrExecute ++ instrNext)
-    where convertedT = (\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT
+    where convertedT  = (\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT
 
 
 transIR (END:remainder) = do code1 <- free
