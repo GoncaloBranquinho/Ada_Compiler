@@ -22,7 +22,23 @@ data Instr = MOVE String Temp Temp
 
 data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
             | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT
-    deriving (Show, Eq)
+    deriving (Eq)
+
+
+instance Show BinOp where
+    show (IR.ADD _)   = "ADD"
+    show (IR.SUB _)   = "SUB"
+    show (IR.MULT _)  = "MULT"
+    show (IR.DIV _)   = "DIV"
+    show (IR.POW _)   = "POW"
+    show IR.AND       = "AND"
+    show IR.OR        = "OR"
+    show IR.XOR       = "XOR"
+    show (IR.EQ _)    = "EQ"
+    show (IR.NE _)    = "NE"
+    show (IR.LT _)    = "LT"
+    show (IR.LE _)    = "LE"
+    show IR.CONCAT    = "CONCAT"
 
 data Literal = TInt Int | TDouble Float | TString String
     deriving (Show, Eq)
@@ -31,6 +47,7 @@ data Literal = TInt Int | TDouble Float | TString String
   --  show (TInt n)    = show n
     --show (TDouble n) = show n
     --show (TString n) = show n
+
 
 type Temp = String
 type Label = String
