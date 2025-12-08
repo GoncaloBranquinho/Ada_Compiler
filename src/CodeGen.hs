@@ -13,7 +13,7 @@ type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int], Content)
 type Addresses = Map.Map String [Location]
 type Content = Map.Map String ValueInfo
 
-data ValueInfo = Value | HeapP | DataP | Concat ValueInfo ValueInfo
+data ValueInfo = Value | HeapP String | DataP String | Concat ValueInfo ValueInfo
         deriving (Show,Eq)
 
 
@@ -239,9 +239,23 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                     ("Float",Stack _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                                                                     ("Float",Stack _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                              POW t    -> do changeContent t1'' Value
-                                                                            case t of
-                                                                                   "Integer" -> return []
-                                                                                   "Float"   -> return []
+                                                                            case (t,t1',t2',t3') of
+                                                                                                 ("Integer",RegI _, RegI _,RegI _)    -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                 ("Integer",RegI _, RegI _,Stack _)   -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Integer",RegI _, Stack _,RegI _)   -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                 ("Integer",RegI _, Stack _,Stack _)  -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Integer",Stack _, RegI _,RegI _)   -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                 ("Integer",Stack _, RegI _,Stack _)  -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Integer",Stack _, Stack _,RegI _)  -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                 ("Integer",Stack _, Stack _,Stack _) -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Float",RegI _, RegI _,RegI _)      -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                 ("Float",RegI _, RegI _,Stack _)     -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Float",RegI _, Stack _,RegI _)     -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                 ("Float",RegI _, Stack _,Stack _)    -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Float",Stack _, RegI _,RegI _)     -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                 ("Float",Stack _, RegI _,Stack _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                 ("Float",Stack _, Stack _,RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                 ("Float",Stack _, Stack _,Stack _)   -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
                                                              CONCAT   -> do t2''' <- getContent t2''
                                                                             t3''' <- getContent t3''
                                                                             changeContent t1'' (Concat t2''' t3''')
@@ -264,7 +278,7 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                                            (_, Stack _, Stack _)       -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
                                                            (_, Stack _, RegF _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
                                                            (_, RegF _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
-                                                           (_, RegF _, RegF _)           -> ["move " ++ t1'' ++ ", " ++ t2'']
+                                                           (_, RegF _, RegF _)         -> ["move " ++ t1'' ++ ", " ++ t2'']
                                         code1 <- transIR remainder
                                         return (instr ++ code1)
 
@@ -273,7 +287,7 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2' <- if (convertedT == "Integer") then (return (RegI "")) else (getLocation extractedT convertedT)
                                          t1'' <- getAddress t1'
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
-                                         let typeOfValue = if convertedT == "Integer" then Value else DataP
+                                         let typeOfValue = if convertedT == "Integer" then Value else (DataP t2'')
                                          changeContent t1'' typeOfValue
                                          let instrExecute = case (litT, t1') of 
                                                                              (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
@@ -294,10 +308,7 @@ transIR (END:remainder) = do code1 <- free
 
 
 
-
-
-
-
+ 
 
 
 
@@ -308,6 +319,9 @@ transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
                                          t2' <- getLocation t2 "String"
                                          t3' <- getLocation t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
                                          ["la $a0, " ++ t2'] ++ ["lw " ++ t1' ++ ", 0($a0)"] ++ ["la $a0, strbuf"] ++ [l ++ ":"] ++ ["lb $a1, 0(" ++ t1' ++ ")"] ++ ["sb $a1, 0($a0)"] ++ ["addi " ++ t1' ++ ", " ++ t1' ++ ", 1"] ++ ["addi $a0, $a0, 1"] ++ ["bne $a1, $0, l"] ++ ["li $v0, 4"] ++ ["la $a0, strbuf"] ++ ["syscall"] ++ (transIR remainder)
+
+
+
 
 transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
                                          t2' <- getLocation t2 "Integer"
