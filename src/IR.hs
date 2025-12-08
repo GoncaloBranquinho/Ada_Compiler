@@ -22,18 +22,12 @@ data Instr = MOVE String Temp Temp
 
 data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
             | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT
-    deriving (Show, Eq)
-
-
+    deriving (Show,Eq)  
 
 
 data Literal = TInt Int | TDouble Float | TString String
     deriving (Show, Eq)
 
---instance Show Literal where
-  --  show (TInt n)    = show n
-    --show (TDouble n) = show n
-    --show (TString n) = show n
 
 type Temp = String
 type Label = String
@@ -310,9 +304,9 @@ transExec (GetLine id1 id2) table = do scope <- getScope
 
 
 transExp :: Exp -> (SymTab, ScopeMem) -> Temp -> State Count [Instr]
-transExp TrueLit table dest = do newTyp "Boolean"
+transExp TrueLit table dest = do newTyp "Integer"
                                  return [MOVEI dest (TInt 1)]
-transExp FalseLit table dest = do newTyp "Boolean"
+transExp FalseLit table dest = do newTyp "Integer"
                                   return [MOVEI dest (TInt 0)]
 transExp (IntLit num) table dest = do newTyp "Integer"
                                       return [MOVEI dest (TInt num)]

@@ -170,21 +170,77 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t3'' <- getAddress t3'
                                            instr <- case opT of
                                                              ADD t    -> do changeContent t1'' Value
-                                                                            case t of
-                                                                                   "Integer" -> return ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                   "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                            case (t,t1',t2',t3') of
+                                                                                                    ("Integer",RegI _,RegI _,RegI _)   -> return (["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']) 
+                                                                                                    ("Integer",RegI _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"])
+                                                                                                    ("Integer",RegI _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3''])
+                                                                                                    ("Integer",RegI _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"])
+                                                                                                    ("Integer",Stack _,RegI _,RegI _) -> return (["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",RegI _,RegI _,RegI _)   -> return (["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"])
+                                                                                                    ("Float",RegI _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"])
+                                                                                                    ("Float",Stack _,RegI _,RegI _) -> return (["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                              SUB t    -> do changeContent t1'' Value
-                                                                            case t of
-                                                                                   "Integer" -> return ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                   "Float"   -> return ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                            case (t,t1',t2',t3') of
+                                                                                                    ("Integer",RegI _,RegI _,RegI _)   -> return (["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3''])
+                                                                                                    ("Integer",RegI _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"])
+                                                                                                    ("Integer",RegI _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3''])
+                                                                                                    ("Integer",RegI _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"])
+                                                                                                    ("Integer",Stack _,RegI _,RegI _) -> return (["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",RegI _,RegI _,RegI _)   -> return (["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"])
+                                                                                                    ("Float",RegI _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"])
+                                                                                                    ("Float",Stack _,RegI _,RegI _) -> return (["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                              MULT t   -> do changeContent t1'' Value
-                                                                            case t of
-                                                                                   "Integer" -> return ["mul " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                   "Float"   -> return ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                            case (t,t1',t2',t3') of
+                                                                                                    ("Integer",RegI _,RegI _,RegI _)   -> return (["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0, " ++ t3''] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",Stack _,RegI _,RegI _) -> return (["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",RegI _,RegI _,RegI _)   -> return (["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"])
+                                                                                                    ("Float",RegI _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"])
+                                                                                                    ("Float",Stack _,RegI _,RegI _) -> return (["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                              DIV t    -> do changeContent t1'' Value
-                                                                            case t of
-                                                                                   "Integer" -> return ["div " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                   "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                            case (t,t1',t2',t3') of
+                                                                                                    ("Integer",RegI _,RegI _,RegI _)   -> return (["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0, " ++ t3''] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",RegI _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo " + t1''])
+                                                                                                    ("Integer",Stack _,RegI _,RegI _) -> return (["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,RegI _,Stack _) -> return (["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,RegI _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Integer",Stack _,Stack _,Stack _) -> return (["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",RegI _,RegI _,RegI _)   -> return (["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"])
+                                                                                                    ("Float",RegI _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3''])
+                                                                                                    ("Float",RegI _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"])
+                                                                                                    ("Float",Stack _,RegI _,RegI _) -> return (["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,RegI _,Stack _) -> return (["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,RegI _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
+                                                                                                    ("Float",Stack _,Stack _,Stack _) -> return (["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"])
                                                              POW t    -> do changeContent t1'' Value
                                                                             case t of
                                                                                    "Integer" -> return []
@@ -223,7 +279,7 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                                                                    return (case t1' of Stack _ -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]; RegI _ -> ["la " ++ t1'' ++ ", " ++ t2''])
                                          instrNext <- transIR remainder
                                          return (instrExecute ++ instrNext)
-    where convertedT = (\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT
+    where convertedT = (\x -> case x of TInt y -> "Integer"; TDouble y -> "Float"; TString y -> "String") litT
 
 
 transIR (END:remainder) = do code1 <- free
@@ -240,7 +296,7 @@ transIR (END:remainder) = do code1 <- free
 
 
 
-
+{-
 transIR ((PRINT t1):remainder) STACK = do t1' <- getLocation t1 "String"
                                           ["li $v0, 4"] ++ ["la $a0, " ++ t1'] ++ ["syscall"] ++ (transIR remainder)
 transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
@@ -257,7 +313,7 @@ transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
 
 
 
-{-
+
 
 PRINT:
 
