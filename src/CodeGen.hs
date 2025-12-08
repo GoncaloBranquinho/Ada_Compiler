@@ -113,49 +113,46 @@ transIR ((COND opT t1 t2 l1 l2):remainder) = do t1'  <- getLocation t1 converted
                                                 t2'  <- getLocation t2 convertedT
                                                 t1'' <- getAddress t1'
                                                 t2'' <- getAddress t2'
-                                                let instr = if nextLabel remainder l2
-                                                            then case opT of
-                                                                          IR.EQ t -> case t of
-                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                                          IR.NE t -> case t of
-                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1]
-                                                                          IR.LT t -> case t of
-                                                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                                          IR.LE t -> case t of
-                                                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                            else if nextLabel remainder l1
-                                                            then case opT of
-                                                                          IR.EQ t -> case t of
-                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                                          IR.NE t -> case t of
-                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l2]
-                                                                          IR.LT t -> case t of
-                                                                                            "Integer" -> ["bge " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                                          IR.LE t -> case t of
-                                                                                            "Integer" -> ["bgt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                            else case opT of
-                                                                          IR.EQ t -> case t of
-                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
-                                                                          IR.NE t -> case t of
-                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1] ++ ["j " ++ l2]
-                                                                          IR.LT t -> case t of
-                                                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
-                                                                          IR.LE t -> case t of
-                                                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+                                                let instrAllocate = case (convertedT, t1', t2') of
+                                                                                                ("Integer", Stack _, Stack _) -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["lw $a1, " ++ t2'' ++ "($sp)"]
+                                                                                                ("Integer", Stack _, RegI _)  -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2'']
+                                                                                                ("Integer", RegI _, Stack _)  -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"]
+                                                                                                ("Integer", RegI _, RegI _)   -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2'']
+                                                                                                ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"]
+                                                                                                ("Float", Stack _, RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2'']
+                                                                                                ("Float", RegI _, Stack _)    -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"]
+                                                                                                ("Float", RegI _, RegI _)     -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2'']
+                                                let instrExecute = if nextLabel remainder l2
+                                                                   then case (opT, convertedT) of
+                                                                                               (IR.EQ _, "Integer") -> ["beq $a0, $a1, " ++ l1]
+                                                                                               (IR.EQ _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1t " ++ l1]
+                                                                                               (IR.NE _, "Integer") -> ["bne $a0, $a1, " ++ l1]
+                                                                                               (IR.NE _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1f " ++ l1]
+                                                                                               (IR.LT _, "Integer") -> ["blt $a0, $a1, " ++ l1]
+                                                                                               (IR.LT _, "Float")   -> ["c.lt.s $f12, $f13"] ++ ["bc1t " ++ l1]
+                                                                                               (IR.LE _, "Integer") -> ["ble $a0, $a1, " ++ l1]
+                                                                                               (IR.LE _, "Float")   -> ["c.le.s $f12, $f13"] ++ ["bc1t " ++ l1]
+                                                                   else if nextLabel remainder l1
+                                                                   then case (opT, convertedT) of
+                                                                                               (IR.EQ _, "Integer") -> ["bne $a0, $a1, " ++ l2]
+                                                                                               (IR.EQ _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1f " ++ l2]
+                                                                                               (IR.NE _, "Integer") -> ["beq $a0, $a1, " ++ l2]
+                                                                                               (IR.NE _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1t " ++ l2]
+                                                                                               (IR.LT _, "Integer") -> ["bge $a0, $a1, " ++ l2]
+                                                                                               (IR.LT _, "Float")   -> ["c.lt.s $f12, $f13"] ++ ["bc1f " ++ l2]
+                                                                                               (IR.LE _, "Integer") -> ["bgt $a0, $a1, " ++ l2]
+                                                                                               (IR.LE _, "Float")   -> ["c.le.s $f12, $f13"] ++ ["bc1f " ++ l2]
+                                                                   else case (opT, convertedT) of
+                                                                                               (IR.EQ _, "Integer") -> ["beq $a0, $a1, " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.EQ _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.NE _, "Integer") -> ["bne $a0, $a1, " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.NE _, "Float")   -> ["c.eq.s $f12, $f13"] ++ ["bc1f " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.LT _, "Integer") -> ["blt $a0, $a1, " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.LT _, "Float")   -> ["c.lt.s $f12, $f13"] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.LE _, "Integer") -> ["ble $a0, $a1, " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.LE _, "Float")   -> ["c.le.s $f12, $f13"] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
                                                 code1 <- transIR remainder
-                                                return (instr ++ code1)
+                                                return (instrAllocate ++ instrExecute ++ code1)
     where convertedT = (\x -> val x) opT
 
 transIR ((LABEL l):remainder) = do code1 <- transIR remainder
