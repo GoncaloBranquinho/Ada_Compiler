@@ -73,19 +73,21 @@ fillData (str:remainder) flt = do dataCounter <- newData
                                   addData ("str" ++ show dataCounter ++ ": .asciiz " ++ "\"" ++ str ++ "\"")
                                   fillData remainder flt
 
-getAddress :: String -> String -> State Counter Location
-getAddress str t = do (_, _, _,table,_,_,_) <- get
+getLocation :: String -> String -> State Counter Location
+getLocation str t = do (_, _, _,table,_,_,_) <- get
                       let (Just value) = Map.lookup str table
-                      if (length value) == 1 then return (head value) else case t of
-                                                                             "Integer" -> return (head value)
-                                                                             "Float"   -> return (last value)
+                      if (length value) == 1 
+                      then return (head value)
+                      else case t of
+                                  "Integer" -> return (head value)
+                                  "Float"   -> return (last value)
 
-extractAddress :: Location -> State Counter String
-extractAddress loc = case loc of
-                       RegI n   -> return n
-                       RegF n   -> return n
-                       Stack n  -> return (show n)
-                       Global n -> return n
+getAddress :: Location -> State Counter String
+getAddress loc = case loc of
+                          RegI n   -> return n
+                          RegF n   -> return n
+                          Stack n  -> return (show n)
+                          Global n -> return n
 
 changeContent :: String -> ValueInfo -> State Counter ()
 changeContent id val = do (offset, dataCounter, dataList, table, scpInfo, order, content) <- get
@@ -107,122 +109,121 @@ free = do (offset, dataCounter, dataList, table, scpInfo, order, content) <- get
 
 transIR :: [Instr] -> State Counter [String]
 transIR [] = return []
-transIR ((COND opT t1 t2 l1 l2):remainder) = do t1'  <- getAddress t1 convertedT
-                                                t2'  <- getAddress t2 convertedT
-                                                t1'' <- extractAddress t1'
-                                                t2'' <- extractAddress t2'
-                                                let instr =
-                                                      if nextLabel remainder l2
-                                                      then case opT of
-                                                          IR.EQ t -> case t of
-                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                          IR.NE t -> case t of
-                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1]
-                                                          IR.LT t -> case t of
-                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                            "Float"  -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                          IR.LE t -> case t of
-                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
-                                                            "Float"  -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
-                                                      else if nextLabel remainder l1
-                                                      then case opT of
-                                                          IR.EQ t -> case t of
-                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                          IR.NE t -> case t of
-                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l2]
-                                                          IR.LT t -> case t of
-                                                            "Integer" -> ["bge " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                            "Float"  -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                          IR.LE t -> case t of
-                                                            "Integer" -> ["bgt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
-                                                            "Float"  -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
-                                                      else case opT of
-                                                          IR.EQ t -> case t of
-                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
-                                                          IR.NE t -> case t of
-                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                            "Float"  -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1] ++ ["j " ++ l2]
-                                                          IR.LT t -> case t of
-                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                            "Float"  -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
-                                                          IR.LE t -> case t of
-                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
-                                                            "Float"  -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+transIR ((COND opT t1 t2 l1 l2):remainder) = do t1'  <- getLocation t1 convertedT
+                                                t2'  <- getLocation t2 convertedT
+                                                t1'' <- getAddress t1'
+                                                t2'' <- getAddress t2'
+                                                let instr = if nextLabel remainder l2
+                                                            then case opT of
+                                                                          IR.EQ t -> case t of
+                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
+                                                                          IR.NE t -> case t of
+                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1]
+                                                                          IR.LT t -> case t of
+                                                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
+                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
+                                                                          IR.LE t -> case t of
+                                                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1]
+                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1]
+                                                            else if nextLabel remainder l1
+                                                            then case opT of
+                                                                          IR.EQ t -> case t of
+                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
+                                                                          IR.NE t -> case t of
+                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l2]
+                                                                          IR.LT t -> case t of
+                                                                                            "Integer" -> ["bge " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
+                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
+                                                                          IR.LE t -> case t of
+                                                                                            "Integer" -> ["bgt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l2]
+                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l2]
+                                                            else case opT of
+                                                                          IR.EQ t -> case t of
+                                                                                            "Integer" -> ["beq " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+                                                                          IR.NE t -> case t of
+                                                                                            "Integer" -> ["bne " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                            "Float"   -> ["c.eq.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1f " ++ l1] ++ ["j " ++ l2]
+                                                                          IR.LT t -> case t of
+                                                                                            "Integer" -> ["blt " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                            "Float"   -> ["c.lt.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
+                                                                          IR.LE t -> case t of
+                                                                                            "Integer" -> ["ble " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                            "Float"   -> ["c.le.s, " ++ t1'' ++ ", " ++ t2''] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
                                                 code1 <- transIR remainder
                                                 return (instr ++ code1)
-                            where convertedT = (\x -> val x) opT
+    where convertedT = (\x -> val x) opT
 
 transIR ((LABEL l):remainder) = do code1 <- transIR remainder
                                    return ([l ++ ":"] ++ code1)
 transIR ((JUMP l):remainder) = do code1 <- transIR remainder
                                   return (["j " ++ l] ++ code1)
-transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getAddress t1 convertedT
-                                           t2' <- getAddress t2 convertedT
-                                           t3' <- getAddress t3 convertedT
-                                           t1'' <- extractAddress t1'
-                                           t2'' <- extractAddress t2'
-                                           t3'' <- extractAddress t3'
-                                           instr <-
-                                              case opT of
-                                                ADD t    -> do changeContent t1'' Value
-                                                               case t of
-                                                                  "Integer" -> return ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                  "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                SUB t    -> do changeContent t1'' Value
-                                                               case t of
-                                                                  "Integer" -> return ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                  "Float"   -> return ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                MULT t   -> do changeContent t1'' Value
-                                                               case t of
-                                                                  "Integer" -> return ["mul " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                  "Float"   -> return ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                DIV t    -> do changeContent t1'' Value
-                                                               case t of
-                                                                  "Integer" -> return ["div " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                  "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                POW t    -> do changeContent t1'' Value
-                                                               case t of
-                                                                  "Integer" -> return []
-                                                                  "Float"   -> return []
-                                                CONCAT   -> do t2''' <- getContent t2''
-                                                               t3''' <- getContent t3''
-                                                               changeContent t1'' (Concat t2''' t3''')
-                                                               return []
+transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
+                                           t2' <- getLocation t2 convertedT
+                                           t3' <- getLocation t3 convertedT
+                                           t1'' <- getAddress t1'
+                                           t2'' <- getAddress t2'
+                                           t3'' <- getAddress t3'
+                                           instr <- case opT of
+                                                             ADD t    -> do changeContent t1'' Value
+                                                                            case t of
+                                                                                   "Integer" -> return ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                   "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                             SUB t    -> do changeContent t1'' Value
+                                                                            case t of
+                                                                                   "Integer" -> return ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                   "Float"   -> return ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                             MULT t   -> do changeContent t1'' Value
+                                                                            case t of
+                                                                                   "Integer" -> return ["mul " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                   "Float"   -> return ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                             DIV t    -> do changeContent t1'' Value
+                                                                            case t of
+                                                                                   "Integer" -> return ["div " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                   "Float"   -> return ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                             POW t    -> do changeContent t1'' Value
+                                                                            case t of
+                                                                                   "Integer" -> return []
+                                                                                   "Float"   -> return []
+                                                             CONCAT   -> do t2''' <- getContent t2''
+                                                                            t3''' <- getContent t3''
+                                                                            changeContent t1'' (Concat t2''' t3''')
+                                                                            return []
                                            code1 <- transIR remainder
                                            return (instr ++ code1)
-      where convertedT = (\x -> val x) opT
+    where convertedT = (\x -> val x) opT
 
-transIR ((MOVE t t1 t2):remainder) = do t1'   <- getAddress t1 t
-                                        t2'   <- getAddress t2 t
-                                        t1''  <- extractAddress t1'
-                                        t2''  <- extractAddress t2'
+transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
+                                        t2'   <- getLocation t2 t
+                                        t1''  <- getAddress t1'
+                                        t2''  <- getAddress t2'
                                         t2''' <- getContent t2''
                                         changeContent t1'' t2'''
                                         let instr = case t of
-                                                      "Integer" -> ["move " ++ t1'' ++ ", " ++ t2'']
-                                                      "Float"   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
+                                                           "Integer" -> ["move " ++ t1'' ++ ", " ++ t2'']
+                                                           "Float"   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
                                         code1 <- transIR remainder
                                         return (instr ++ code1)
 
-transIR ((MOVEI t1 (litT t)):remainder) = do t1' <- getAddress t1 convertedT
-                                             t2' <- getAddress (if convertedT == "String" then t else (show t)) convertedT
-                                             t1'' <- extractAddress t1'
-                                             t2'' <- extractAddress t2'
-                                             let instr = case litT of
-                                                           TInt t    -> do changeContent t1'' Value
-                                                                           ["li " ++ t1'' ++ ", " ++ (show t)]
-                                                           TDouble t  -> do changeContent t1'' DataP
-                                                                           ["lwc1 " ++ t1'' ++ ", " ++ t2'']
-                                                           TString t -> do changeContent t1'' DataP
-                                                                           ["la " ++ t1'' ++ ", " ++ t2'']
-                                             code1 <- transIR remainder
-                                             return (instr ++ code1)
-    where convertedT = let litT = (lit t) in ((\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT)
+transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
+                                         t2' <- getLocation (if convertedT == "String" then t else (show t)) convertedT
+                                         t1'' <- getAddress t1'
+                                         t2'' <- getAddress t2'
+                                         let instrAllocate = case 
+                                         let instrExecute = case litT of
+                                                                      TInt t    -> do changeContent t1'' Value
+                                                                                      ["li " ++ t1'' ++ ", " ++ (show t)]
+                                                                      TDouble t -> do changeContent t1'' DataP
+                                                                                      ["lwc1 " ++ t1'' ++ ", " ++ t2'']
+                                                                      TString t -> do changeContent t1'' DataP
+                                                                                      ["la " ++ t1'' ++ ", " ++ t2'']
+                                             instrNext <- transIR remainder
+                                             return (instrAllocate ++ instrExecute ++ instrNext)
+    where convertedT = (\x -> case x of TInt y -> "Integer"; TFloat y -> "Float"; TString y -> "String") litT
 
 
 transIR (END:remainder) = do code1 <- free
@@ -240,17 +241,16 @@ transIR (END:remainder) = do code1 <- free
 
 
 
-transIR ((PRINT t1):remainder) STACK = do t1' <- getAddress t1 "String"
+transIR ((PRINT t1):remainder) STACK = do t1' <- getLocation t1 "String"
                                           ["li $v0, 4"] ++ ["la $a0, " ++ t1'] ++ ["syscall"] ++ (transIR remainder)
-transIR ((PRINT t1):remainder) HEAP = do t1' <- getAddress t1 "String"
-                                         t2' <- getAddress t2 "String"
-                                         t3' <- getAddress t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
+transIR ((PRINT t1):remainder) HEAP = do t1' <- getLocation t1 "String"
+                                         t2' <- getLocation t2 "String"
+                                         t3' <- getLocation t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
                                          ["la $a0, " ++ t2'] ++ ["lw " ++ t1' ++ ", 0($a0)"] ++ ["la $a0, strbuf"] ++ [l ++ ":"] ++ ["lb $a1, 0(" ++ t1' ++ ")"] ++ ["sb $a1, 0($a0)"] ++ ["addi " ++ t1' ++ ", " ++ t1' ++ ", 1"] ++ ["addi $a0, $a0, 1"] ++ ["bne $a1, $0, l"] ++ ["li $v0, 4"] ++ ["la $a0, strbuf"] ++ ["syscall"] ++ (transIR remainder)
 
-transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getAddress t1 "String"
-                                         t2' <- getAddress t2 "Integer"
-                                         t3' <- getAddress t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
-                                         ["la " ++ t1' ++ ", " ++ "strbuf"] ++ ["li $v0, 8"] ++ ["move $a0, " ++ t1'] ++ ["li $a1, 256"] ++ ["syscall"] ++ [l1 ++ ":"] ++ ["lb " ++ t2' ++ ", 0($a0)"] ++ ["addi $a0, $a0, 1"] ++ ["bne " ++ t2' ++ ", $0, " ++ l1] ++ ["sub " ++ t2' ++ ", $a0, " ++ t1'] ++ ["move $a1, $a0"] ++ ["li $v0, 9"] ++ ["move $a0, " ++ t2'] ++ ["syscall"] ++ [l2 ++ ":"] ++ ["lb $a0, 0(" ++ t1' ++ ")"] ++ ["sb $a0, 0($v0)"] ++ ["addi " ++ t1' ++ ", " ++ t1' ++ ", 1"] ++ ["addi $v0, $v0, 1"] ++ ["bne " ++ t1' ++ ", $a1, " ++ l2] ++ ["sub " ++ t1' ++ ", $v0, " ++ t2'] ++ ["la $a0, " ++ t3'] ++ ["sw " ++ t1' ++ ", 0($a0)"] ++ (transIR remainder)
+transIR ((READ t1 t2 l1 l2):remainder) = t1' <- getLocation t1 "String"
+                                         t2' <- getLocation t2 "Integer"
+                                         t3' <- getLocation t3 "String" -- ou "Address"? "HeapAddress"? "Heap"?"
 -- falta fazer o decl
 -- t1' t2' t3' nao sao ainda os registos, sao do tipo Location, e é preciso verificar se esta na stack, porque se for o caso precisamos de meter antes num registro (a ou v)
 -- meter return onde falta
