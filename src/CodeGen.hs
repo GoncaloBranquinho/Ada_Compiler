@@ -65,12 +65,8 @@ fillData (str:remainder) flt = do dataCounter <- newData
 
 getLocation :: String -> String -> State Counter Location
 getLocation str t = do (_, _,table,_,_,_) <- get
-                       let (Just value) = Map.lookup str table
-                       if (length value) == 1
-                       then return (head value)
-                       else case t of
-                                   "Float"   -> return (last value)
-                                   _         -> return (head value)
+                       let Just value = Map.lookup str table 
+                       if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
 
 getAddress :: Location -> State Counter String
 getAddress loc = case loc of
@@ -291,16 +287,25 @@ transIR (END:remainder) = do code1 <- free
                              code2 <- transIR remainder
                              return (code1 ++ code2)
 
+
+transIR ((DECL t1 t):remainder) = do case t of
+                                            "String" -> do t1'  <- getLocation t1 t
+                                                           t1'' <- getAddress t1'
+                                                           changeContent t1'' [t1']
+                                            _        -> return ()
+                                     transIR remainder
+
+
 transIR ((READ t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                       t2' <- getLocation t2 "Integer"
                                       t1'' <- getAddress t1'
                                       t2'' <- getAddress t2'
                                       changeContent t1'' [t1']
                                       let instrExecute = case (t1', t2') of
-                                                                         (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"]
-                                                                         (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"]
-                                                                         (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
-                                                                         (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1 ++ ", -24($sp)"] ++ ["lw " ++ t2 ++ ", -28($sp)"]
+                                                                         (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1''] ++ ["addi $a3, $sp, " ++ t2''] ++ ["jal read"]
+                                                                         (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2''] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($sp)"]
+                                                                         (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1''] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2'' ++ ", -28($sp)"]
+                                                                         (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($sp)"] ++ ["lw " ++ t2'' ++ ", -28($sp)"]
                                       instrNext <- transIR remainder
                                       return (instrExecute ++ instrNext)
 

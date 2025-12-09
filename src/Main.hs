@@ -56,7 +56,7 @@ main = do
             let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
             let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
             let scopeList = Map.toList scopeTable
-            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,0,Map.empty,Map.empty)
+            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,32,Map.empty,Map.empty)
             print addresses
             print scopeInfo
 
@@ -65,9 +65,11 @@ main = do
             let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
             let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
             let scopeList = Map.toList scopeTable
-            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,0,Map.empty,Map.empty)
-            let mipsCode = evalState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty)
-            mapM_ print mipsCode
+            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,32,Map.empty,Map.empty)
+            let mipsCode = (intercalate "\n") $ (evalState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty))
+            --let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty)
+            --putStr $ show $ sxt $ snd $ mipsCode
+            putStr $ mipsCode
 
 
 

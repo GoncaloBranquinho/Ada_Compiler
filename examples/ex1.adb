@@ -5,8 +5,7 @@ procedure Main is
   p : String;
   k : String := "ola";
 begin
-  Get_Line(p,z);
-  k := k & p;
-  y := 1.0 + 2.1 + x;
+  k := k & k;
+  put_line(k);
 end Main;
 

@@ -181,17 +181,20 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             let isFloat = typ == TypeFloat
                                             mapM_ (\id -> addTable id offset isFloat) idsList
                                             t1 <- newTemp
+                                            addTable t1 offset False
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
                                             let newTyp = typeToString typ
+                                            let decls = map (\v -> DECL v typString) idsList 
                                             let moves = map (\v -> MOVE newTyp v t1) idsList
                                             popTemp 1
-                                            return (code1 ++ moves)
+                                            return (decls ++ code1 ++ moves)
 transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
                                            let offset = typeToOffset typ
                                            let isFloat = typ == TypeFloat
                                            mapM_ (\id -> addTable id offset isFloat) idsList
-                                           return []
+                                           let typString = typeToString typ
+                                           return (concatMap (\v -> [DECL v typString]) idsList)
 
 
 transDeclVar :: DeclVar -> (SymTab, ScopeMem) -> State Count [Temp]
@@ -305,6 +308,7 @@ transExec (GetLine id1 id2) table = do scope <- getScope
 
 transExp :: Exp -> (SymTab, ScopeMem) -> Temp -> State Count [Instr]
 transExp TrueLit table dest = do newTyp "Integer"
+                                 addTable dest 4 False
                                  return [MOVEI dest (TInt 1)]
 transExp FalseLit table dest = do newTyp "Integer"
                                   return [MOVEI dest (TInt 0)]
