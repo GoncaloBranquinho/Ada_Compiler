@@ -312,9 +312,9 @@ transIR ((PRINT t1):remainder) = do t1' <- getLocation t1 "String"
                                     return (instrExec ++ ["jal put_line"] ++ instrNext)
 
 printMultiple :: [Location] -> [String]
-printMultiple [] = []
+printMultiple [] = ["#debug"]
 printMultiple (x:xs) = case x of
-                              RegI t1  -> ["li $v0, 4"] ++ ["move $a0, " ++ t1] ++ ["syscall"]
-                              Stack t1 -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1) ++ "($sp)"] ++ ["syscall"]
+                              RegI t1  -> ["li $v0, 4"] ++ ["move $a0, " ++ t1] ++ ["syscall"] ++ printMultiple xs
+                              Stack t1 -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1) ++ "($sp)"] ++ ["syscall"] ++ printMultiple xs
 
 
