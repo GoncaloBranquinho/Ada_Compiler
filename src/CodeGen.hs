@@ -348,7 +348,7 @@ printMultiple (Var t1:xs) = do x <- getLocation t1 "String"
                                nextStrings <- printMultiple xs
                                return (instr ++ nextStrings)
 
-transIR ((TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
+transIR ((IR.TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                          t2' <- getLocation t2 t
                                          t1'' <- getAddress t1'
                                          t2'' <- getAddress t2'
