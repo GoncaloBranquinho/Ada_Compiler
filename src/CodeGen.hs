@@ -39,7 +39,7 @@ transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
                                    (_, dataList, _, _, _,_) <- get
-                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatOne ++ floatZero ++ dataList ++ [".text", "main:"] ++ code2 ++ readFun ++ printFun ++ putLineFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ exitProgram)
+                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatOne ++ floatZero ++ dataList ++ [".text", "main:"] ++ code2 ++ ["jal exitProgram"] ++ readFun ++ printFun ++ putLineFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ exitProgram)
     where strBuf       = ["string_buffer: .space 1024"]
           strBufSize   = ["string_buffer_size: .half 1024"]
           powOvrFlwMsg = ["pow_overflow_str: .asciiz \"Erro: overflow na funcao exponencial!\n\""]
