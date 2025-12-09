@@ -31,7 +31,7 @@ popRegI n = do (regI,regF,stackP,tbl,scpInfo) <- get
 newRegF :: State Count Reg
 newRegF = do (regI,regF,stackP,tbl,scpInfo) <- get
              put (regI, regF+1, stackP, tbl, scpInfo)
-             return (if regF < 12 then "$f" ++ show regF else "$f" ++ show (regF + 4)) 
+             return (if regF < 12 then "$f" ++ show regF else "$f" ++ show (regF + 4))
 
 
 popRegF :: Int -> State Count ()
@@ -90,8 +90,8 @@ allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
 -- atualmente cada temporario tem um registro para int e outro para float, ou entao vai para a stack. Mas consigo modificar o codigo intermedio para verificar se um temporario vai alguma vez guardar floats
 allocateReg :: Int -> (String,Int,Bool) -> State Count ()
 allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
-                                        if (regI == 19 && (not isFloat || head id == '_')) ||
-                                           (regF == 29 && (isFloat || head id == '_'))
+                                        if (regI == 18 && (not isFloat || head id == '_')) ||
+                                           (regF == 28 && (isFloat || head id == '_'))
                                            then allocateStack scp (id,bytes,isFloat)
                                            else do
                                              (newRegI', newRegF', tbl', scpInfo') <-
