@@ -1,9 +1,18 @@
 procedure Main is
-  V : Integer := 10;
+  x, y : String;
 begin
-  if not (V = 5) then
-    V := 15;
-  else
-    Put_Line ("SIGMA\n");
-  end if;
+  x := "1";
+  y := "2";
+  put_line(x);
+  put_line(y);
+  declare
+    x, z : String;
+  begin
+    x := "3";
+    z := "4";
+    put_line(x);
+    put_line(z);
+  end;
+  put_line(x);
+  put_line(y);
 end Main;

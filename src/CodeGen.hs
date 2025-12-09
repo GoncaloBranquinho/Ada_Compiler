@@ -300,6 +300,9 @@ transIR (END:remainder) = do code1 <- free
                              return (code1 ++ code2)
 
 
+transIR (WHILE:remainder) = transIR remainder -- completar, se virmos um concat durante o while, avaliar a string e guardar o resultado no respetivo espaço da memória, e fazer changeContent t1 ([Var t1]) acho.
+transIR (ENDWHILE:remainder) = transIR remainder -- completar
+
 transIR ((DECL t1 t):remainder) = do case t of
                                             "String" -> do t1'  <- getLocation t1 t
                                                            t1'' <- getAddress t1'

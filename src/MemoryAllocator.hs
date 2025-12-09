@@ -89,7 +89,7 @@ allocateScope scp (idInfo:nextIds) = do allocateReg scp idInfo
                                         allocateScope scp nextIds
 
 
--- atualmente cada temporario tem um registro para int e outro para float, ou entao vai para a stack. Acho que é possivel modificar o codigo intermedio para verificar se um temporario vai alguma vez guardar floats
+-- atualmente cada temporario tem um registro para int e outro para float, ou entao vai para a stack. Mas consigo modificar o codigo intermedio para verificar se um temporario vai alguma vez guardar floats
 allocateReg :: Int -> (String,Int,Bool) -> State Count ()
 allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                         if (regI == 19 && (not isFloat || head id == '_')) ||

@@ -7,6 +7,7 @@ import Control.Monad.State
 import SymbolTable
 import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
+import Lexer (Token(WHILE))
 
 data Instr = MOVE String Temp Temp
            | MOVEI Temp Literal
@@ -19,6 +20,8 @@ data Instr = MOVE String Temp Temp
            | DECL Temp String
            | BEGIN
            | END
+           | WHILE
+           | ENDWHILE
     deriving (Show, Eq)
 
 data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
@@ -78,13 +81,8 @@ newTyp str = do (temps, labels, scope, _, setString, table,currScopeMips, nextSc
 
 
 getVarTyp :: State Count String
-getVarTyp = do (_,_,_, typ,_,_,currScopeMips,_,_) <- get
+getVarTyp = do (_,_,_, typ,_,_,_,_,_) <- get
                return typ
-
-
-getScope :: State Count Int
-getScope = do (_, _, scope,_,_,_,currScopeMips,_,_) <- get
-              return scope
 
 
 getCurrScopeMips :: State Count Int
@@ -199,10 +197,10 @@ transDecl (DeclNonInit ids typ) table = do idsList <- transDeclVar ids table
 
 
 transDeclVar :: DeclVar -> (SymTab, ScopeMem) -> State Count [Temp]
-transDeclVar (DeclVarLast id) table = do scope <- getScope
+transDeclVar (DeclVarLast id) table = do scope <- getCurrScopeMips
                                          let dest = id ++ "@" ++ show scope
                                          return [dest]
-transDeclVar (DeclVarNonLast ids id) table = do scope <- getScope
+transDeclVar (DeclVarNonLast ids id) table = do scope <- getCurrScopeMips
                                                 let dest = id ++ "@" ++ show scope
                                                 rest <- transDeclVar ids table
                                                 return ([dest] ++ rest)
@@ -275,7 +273,7 @@ transExec (DeclBlock decl exec) table = do newScope
                                            addFinishOrder current
                                            exitScope parentScope
                                            return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END])
-transExec (Assign id exp) table = do scope <- getScope
+transExec (Assign id exp) table = do scope <- getCurrScopeMips
                                      (newDest, _) <- getVarScope id (show scope) table
                                      code1 <- transExp exp table newDest
                                      return code1
@@ -294,13 +292,13 @@ transExec (WhileLoop cond exec) table = do label1 <- newLabel
                                            label3 <- newLabel
                                            code1 <- transCond cond table label2 label3
                                            code2 <- transExec exec table
-                                           return ([LABEL label1] ++ code1 ++ [LABEL label2] ++ code2 ++ [JUMP label1, LABEL label3])
+                                           return ([IR.WHILE] ++ [LABEL label1] ++ code1 ++ [LABEL label2] ++ code2 ++ [JUMP label1, LABEL label3, ENDWHILE])
 transExec (PutLine exp) table = do t1 <- newTemp
                                    addTable t1 4 False
                                    code1 <- transExp exp table t1
                                    popTemp 1
                                    return (code1 ++ [PRINT t1])
-transExec (GetLine id1 id2) table = do scope <- getScope
+transExec (GetLine id1 id2) table = do scope <- getCurrScopeMips
                                        (newDest1,_) <- getVarScope id1 (show scope) table
                                        (newDest2,_) <- getVarScope id2 (show scope) table
                                        return [READ newDest1 newDest2]
@@ -321,7 +319,7 @@ transExp (FloatLit num) table dest = do newTyp "Float"
 transExp (StringLit num) table dest = do newTyp "String"
                                          addSet num
                                          return [MOVEI dest (TString num)]
-transExp (Var id) table dest = do scope <- getScope
+transExp (Var id) table dest = do scope <- getCurrScopeMips
                                   (newTemp,typ) <- getVarScope id (show scope) table
                                   newTyp typ
                                   addTable dest 4 False

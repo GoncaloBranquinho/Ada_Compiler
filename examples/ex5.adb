@@ -12,6 +12,7 @@ procedure Main is
                     b : Integer;
                     begin
                     end;
+            x:=3+4;
             end;
         Put_Line("A resposta pós local é: ");
     end Main;
