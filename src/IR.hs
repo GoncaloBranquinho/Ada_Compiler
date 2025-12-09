@@ -18,6 +18,7 @@ data Instr = MOVE String Temp Temp
            | PRINT Temp
            | READ Temp Temp
            | DECL Temp String
+           | TOSTR String Temp Temp
            | BEGIN
            | END
            | WHILE
@@ -420,3 +421,10 @@ transExp (Not cond1) table dest = do label1 <- newLabel
                                      label3 <- newLabel
                                      code1 <- transCond (Not cond1) table label1 label2
                                      return (code1 ++ [LABEL label1, MOVEI dest (TInt 1), JUMP label3, LABEL label2, MOVEI dest (TInt 0), LABEL label3])
+
+transExp (ToStr id) table dest = do t1 <- newTemp
+                                    addTable t1 4 False
+                                    code1 <- transExp (Var id) table t1
+                                    popTemp 1
+                                    typ <- getVarTyp
+                                    return (code1 ++ [IR.TOSTR typ dest t1])

@@ -83,11 +83,11 @@ buildSTDeclVar (DeclVarNonLast dv s) t a = bindST s t a False >>= \t0 -> buildST
 buildSTDeclVar (DeclVarLast s) t a = bindST s t a False >>= \t0 -> return t0
 
 buildSTExec :: Exec -> State SymTabState SymTabState
-buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (get) else (bindST (fst t0) (fst $ snd t0) True True) >>= \t1 -> typeCheck exp >>= \t2 -> updateErrorTableST (show exp) (fst $ snd t0) t2 >>= \t3 -> return t3
+buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> (if (snd $ snd t0) then (get) else (bindST (fst t0) (fst $ snd t0) True True)) >>= \t1 -> typeCheck exp >>= \t2 -> updateErrorTableST (show exp) (fst $ snd t0) t2 >>= \t3 -> return t3
 buildSTExec (IfThenElse exp e1 e2) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e1 >>= \t2 -> buildSTExec e2 >>= \t3 -> return t3
 buildSTExec (WhileLoop exp e) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e >>= \t2 -> return t2
 buildSTExec (PutLine exp) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeStringST >>= \t1 -> return t1
-buildSTExec (GetLine n1 n2) = lookUpST n1 >>= \t0 -> updateErrorTableST n1 (fst $ snd t0) TypeStringST >>= \t1 -> if (snd $ snd t0) then (get) else (bindST (fst t0) (fst $ snd t0) True True) >>= \t2 -> lookUpST n2 >>= \t3 -> updateErrorTableST n2 (fst $ snd t3) TypeIntegerST >>= \t4 -> if (snd $ snd t3) then (get) else (bindST (fst t3) (fst $ snd t3) True True) >>= \t5 -> return t5
+buildSTExec (GetLine n1 n2) = lookUpST n1 >>= \t0 -> updateErrorTableST n1 (fst $ snd t0) TypeStringST >>= \t1 -> (if (snd $ snd t0) then (get) else (bindST (fst t0) (fst $ snd t0) True True)) >>= \t2 -> lookUpST n2 >>= \t3 -> updateErrorTableST n2 (fst $ snd t3) TypeIntegerST >>= \t4 -> (if (snd $ snd t3) then (get) else (bindST (fst t3) (fst $ snd t3) True True)) >>= \t5 -> return t5
 buildSTExec (ExecComp e1 e2) = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
 buildSTExec (DeclBlock d e) = enterScopeST >>= \t0 -> buildSTDecl d >>= \t1 -> buildSTExec e >>= \t2 -> exitScopeST >>= \t3 -> return t3
 buildSTExec (EmptyExec) = get >>= \t0 -> return t0
@@ -118,7 +118,7 @@ typeCheck FalseLit = return TypeBooleanST
 typeCheck (IntLit _) = return TypeIntegerST
 typeCheck (FloatLit _) = return TypeFloatST
 typeCheck (StringLit _) = return TypeStringST
-typeCheck (Var n) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (return (fst $ snd t0)) else (return TypeErrorST)
+typeCheck (Var n) = lookUpST n >>= \t0 -> (if (snd $ snd t0) then (return (fst $ snd t0)) else (return TypeErrorST))
 typeCheck (Add e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
 typeCheck (Sub e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
 typeCheck (Mult e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
@@ -133,6 +133,7 @@ typeCheck (Le e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (i
 typeCheck (Pow e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem t0 [TypeIntegerST, TypeFloatST] && t1 == TypeIntegerST) then t0 else TypeErrorST)
 typeCheck (Concat e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeStringST && t0 == t1) then TypeStringST else TypeErrorST)
 typeCheck (Not e1) = typeCheck e1 >>= \t0 -> return (if (t0 == TypeBooleanST) then TypeBooleanST else TypeErrorST)
+typeCheck (ToStr n) = lookUpST n >>= \t0 -> (if ((fst $ snd t0) /= TypeErrorST) then (return TypeStringST) else (return TypeErrorST))
 
 -- This main function can be used for debugging - or experimenting with - this program on GHCi (it's the acronym for Haskell's interpreter, for those unaware).
 
