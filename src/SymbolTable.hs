@@ -30,7 +30,6 @@ data TypeST = TypeIntegerST
             | TypeFloatST
             | TypeStringST
             | TypeErrorST
-            | TypeErrorST
     deriving (Show, Eq)
 
 convertType :: Type -> TypeST
