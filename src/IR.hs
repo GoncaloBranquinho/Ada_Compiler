@@ -424,4 +424,4 @@ transExp (ToStr id) table dest = do t1 <- newTemp
                                     code1 <- transExp (Var id) table t1
                                     popTemp 1
                                     typ <- getVarTyp
-                                    return (code1 ++ [TOSTR typ dest t1])
+                                    return (code1 ++ [IR.TOSTR typ dest t1])
