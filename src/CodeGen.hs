@@ -72,7 +72,7 @@ fillData (str:remainder) flt = do dataCounter <- newData
 
 getLocation :: String -> String -> State Counter Location
 getLocation str t = do (_, _,table,_,_,_,_,_) <- get
-                       let Just value = Map.lookup str table 
+                       let Just value = Map.lookup str table
                        if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
 
 getAddress :: Location -> State Counter String
