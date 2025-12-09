@@ -38,13 +38,13 @@ transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
                                    (_, dataList, _, _, _,_,_) <- get
-                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatOne ++ floatZero ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
+                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen ++ floatNineZeros ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
     where strBuf         = ["string_buffer: .space 1024"]
           strBufSize     = ["string_buffer_size: .half 1024"]
           powOvrFlwMsg   = ["pow_overflow_str: .asciiz \"Erro: overflow na funcao exponencial!\\n\""]
           powNegExpMsg   = ["pow_negative_exp_str: .asciiz \"Erro: expoente negativo na funcao exponencial!\\n\""]
-          floatOne       = ["float_one: .float 1.0"]
           floatZero      = ["float_zero: .float 0.0"]
+          floatOne       = ["float_one: .float 1.0"]
           floatTen       = ["float_ten: .float 10.0"]
           floatNineZeros = ["float_nine_zeros: .float 1000000000.0"]
           readFun        = ["    read:\naddi $sp, $sp, -24\nsw $a2, 4($sp)\nsw $a3, 8($sp)\nsw $0, 12($sp)\nli $a2, 10\nli $a3, 0\n    read_start:\nla $a0, string_buffer\nlh $a1, string_buffer_size\nli $v0, 8\nsyscall\nmove $a1, $a0\n    read_check_size:\nlb $v1, 0($a0)\naddi $a0, $a0, 1\nbne $v1, $0, read_check_size\nsub $v1, $a0, $a1\nli $v0, 9\nmove $a0, $v1\nsyscall\nsub $v0, $v0, $a3\n    read_move_to_heap:\nlb $a0, 0($a1)\nsb $a0, 0($v0)\naddi $a1, $a1, 1\naddi $v0, $v0, 1\nbne $a0, $0, read_move_to_heap\nlw $a0, 12($sp)\nbne $a0, $0, read_not_first\nsub $a3, $v0, $v1\nsw $a3, 16($sp)\nli $a3, 0\n    read_not_first:\nadd $a0, $a0, $v1\nsubi $a0, $a0, 1\nsw $a0, 12($sp)\nlb $a0, -2($v0)\nsw $a3 20($sp)\naddi $a3, $v1, 3\nsra $a3, $a3, 2\nsll $a3, $a3, 2\naddi $a3, $a3, 1\nsub $a3, $a3, $v1\nlw $v1, 20($sp)\nadd $a3, $a3, $v1\nbne $a0, $a2, read_start\nsb $0, -2($v0)\nlw $a3, 16($sp)\nmove $v0, $a3\nlw $v1, 12($sp)\nlw $a2, 4($sp)\nlw $a3, 8($sp)\nsubi $v1, $v1, 1\nsw $v0, 0($a2)\nsw $v1, 0($a3)\naddi $sp, $sp, 24\njr $ra\n"]
