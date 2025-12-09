@@ -67,10 +67,12 @@ main = do
             let scopeList = Map.toList scopeTable
             let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,32,Map.empty,Map.empty)
             let mipsCode = (intercalate "\n") $ (evalState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty))
-            --let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty)
-            --putStr $ show $ sxt $ snd $ mipsCode
             putStr $ mipsCode
-
+            let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty)
+            putStr $ show $ sxt $ snd $ mipsCode
+          
+sxt :: (a, b, c, d, e, f) -> f
+sxt (_, _, _, _, _, x) = x
 
 
 

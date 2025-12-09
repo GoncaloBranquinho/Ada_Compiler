@@ -248,7 +248,7 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                         t1''  <- getAddress t1'
                                         t2''  <- getAddress t2'
                                         t2''' <- getContent t2''
-                                        changeContent t1'' t2'''
+                                        if (head t2 == '_') then (changeContent t1'' [t1']) else (changeContent t1'' t2''')
                                         let instrExecute = case (t, t1', t2') of
                                                            ("Float", Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
                                                            ("Float", Stack _, RegF _)  -> ["s.s " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
