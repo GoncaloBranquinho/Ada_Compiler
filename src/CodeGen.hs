@@ -76,7 +76,7 @@ getAddress loc = case loc of
 changeContent :: String -> ValueInfo -> State Counter ()
 changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content) <- get
                           let newContent = Map.insert id val content
-                          put (dataCounter,dataList,table,scpInfo,order,content)
+                          put (dataCounter,dataList,table,scpInfo,order,newContent)
 
 getContent :: String -> State Counter ValueInfo
 getContent id = do (_,_,_,_,_,content) <- get
