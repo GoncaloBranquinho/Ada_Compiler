@@ -133,6 +133,7 @@ typeCheck (Le e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (i
 typeCheck (Pow e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem t0 [TypeIntegerST, TypeFloatST] && t1 == TypeIntegerST) then t0 else TypeErrorST)
 typeCheck (Concat e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeStringST && t0 == t1) then TypeStringST else TypeErrorST)
 typeCheck (Not e1) = typeCheck e1 >>= \t0 -> return (if (t0 == TypeBooleanST) then TypeBooleanST else TypeErrorST)
+typeCheck (ToStr n) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (return TypeStringST) else (return TypeErrorST) 
 
 -- This main function can be used for debugging - or experimenting with - this program on GHCi (it's the acronym for Haskell's interpreter, for those unaware).
 
