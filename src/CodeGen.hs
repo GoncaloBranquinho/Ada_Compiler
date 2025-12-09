@@ -215,37 +215,37 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
                                                                        DIV _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegF _)      -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegF _, Stack _)      -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegF _, RegF _)       -> ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", RegF _, Stack _, Stack _)      -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
-                                                                                                                  ("Float", RegF _, Stack _, RegF _)       -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
-                                                                                                                  ("Float", RegF _, RegF _, Stack _)       -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)      -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)      -> ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)       -> ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)      -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)       -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)       -> ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
                                                                                                                   ("Float", RegF _, RegF _, RegF _)        -> ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0, " ++ t3''] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["div $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["div $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["div "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($fp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["div $a0, $a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["div $a0, " ++ t3''] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["div " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
                                                                        POW t  -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegF _)      -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Float", Stack _, RegF _, Stack _)      -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegF _, RegF _)       -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Float", RegF _, Stack _, Stack _)      -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", RegF _, Stack _, RegF _)       -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Float", RegF _, RegF _, Stack _)       -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)      -> ["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)      -> ["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)       -> ["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)      -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)       -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)       -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($fp)"]
                                                                                                                   ("Float", RegF _, RegF _, RegF _)        -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["lw $a1, " ++ t2'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($fp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($fp)"]
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
                                                                        CONCAT _ -> []
                                            instrNext <- transIR remainder
@@ -261,13 +261,13 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                           then do changeContent t1 t2'''
                                                   transIR remainder
                                           else do let instrExecute = case (t, t1', t2') of
-                                                                                        ("Float", Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
-                                                                                        ("Float", Stack _, RegF _)  -> ["s.s " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
-                                                                                        ("Float", RegF _, Stack _)  -> ["l.s " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
+                                                                                        ("Float", Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["s.s $f12, " ++ t1'' ++ "($fp)"]
+                                                                                        ("Float", Stack _, RegF _)  -> ["s.s " ++ t2'' ++ ", " ++ t1'' ++ "($fp)"]
+                                                                                        ("Float", RegF _, Stack _)  -> ["l.s " ++ t1'' ++ ", " ++ t2'' ++ "($fp)"]
                                                                                         ("Float", RegF _, RegF _)   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
-                                                                                        (_, Stack _, Stack _)       -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
-                                                                                        (_, Stack _, RegI _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
-                                                                                        (_, RegI _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
+                                                                                        (_, Stack _, Stack _)       -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["sw $a0, " ++ t1'' ++ "($fp)"]
+                                                                                        (_, Stack _, RegI _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($fp)"]
+                                                                                        (_, RegI _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($fp)"]
                                                                                         (_, RegI _, RegI _)         -> ["move " ++ t1'' ++ ", " ++ t2'']
                                                   instrNext <- transIR remainder
                                                   return (instrExecute ++ instrNext)
@@ -279,9 +279,9 @@ transIR ((MOVEI t1 litT):remainder) = do t1' <- getLocation t1 convertedT
                                          t2'' <- if (convertedT == "Integer") then (return extractedT) else (getAddress t2')
                                          if convertedT == "String" then (changeContent t1 ([Lit extractedT])) else return ()
                                          let instrExecute = case (litT, t1') of
-                                                                             (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
+                                                                             (TInt t, Stack _)    -> ["li $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($fp)"]
                                                                              (TInt t, RegI _)     -> ["li " ++ t1'' ++ ", " ++ t2'']
-                                                                             (TDouble t, Stack _) -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($sp)"]
+                                                                             (TDouble t, Stack _) -> ["lwc1 $f12, " ++ t2''] ++ ["s.s $f12, " ++ t1'' ++ "($fp)"]
                                                                              (TDouble t, RegF _)  -> ["lwc1 " ++ t1'' ++ ", " ++ t2'']
                                                                              --(TString t, Stack _) -> ["la $a0, " ++ t2''] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
                                                                              --(TString t, RegI _)  -> ["la " ++ t1'' ++ ", " ++ t2'']
@@ -314,10 +314,10 @@ transIR ((READ t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                       t2'' <- getAddress t2'
                                       changeContent t1 ([Var t1])
                                       let instrExecute = case (t1', t2') of
-                                                                         (Stack _, Stack _) -> ["addi $a2, $sp, " ++ t1''] ++ ["addi $a3, $sp, " ++ t2''] ++ ["jal read"]
-                                                                         (Stack _, RegI _)  -> ["subi $a2, $sp, 24"] ++ ["addi $a3, $sp, " ++ t2''] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($sp)"]
-                                                                         (RegI _, Stack _)  -> ["addi $a2, $sp, " ++ t1''] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t2'' ++ ", -28($sp)"]
-                                                                         (RegI _, RegI _)   -> ["subi $a2, $sp, 24"] ++ ["subi $a3, $sp, 28"] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($sp)"] ++ ["lw " ++ t2'' ++ ", -28($sp)"]
+                                                                         (Stack _, Stack _) -> ["addi $a2, $fp, " ++ t1''] ++ ["addi $a3, $fp, " ++ t2''] ++ ["jal read"]
+                                                                         (Stack _, RegI _)  -> ["subi $a2, $fp, 24"] ++ ["addi $a3, $fp, " ++ t2''] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($fp)"]
+                                                                         (RegI _, Stack _)  -> ["addi $a2, $fp, " ++ t1''] ++ ["subi $a3, $fp, 28"] ++ ["jal read"] ++ ["lw " ++ t2'' ++ ", -28($fp)"]
+                                                                         (RegI _, RegI _)   -> ["subi $a2, $fp, 24"] ++ ["subi $a3, $fp, 28"] ++ ["jal read"] ++ ["lw " ++ t1'' ++ ", -24($fp)"] ++ ["lw " ++ t2'' ++ ", -28($fp)"]
                                       instrNext <- transIR remainder
                                       return (instrExecute ++ instrNext)
 
@@ -337,6 +337,6 @@ printMultiple (Lit t1:xs) = do t1'  <- getLocation t1 "String"
 printMultiple (Var t1:xs) = do x <- getLocation t1 "String"
                                let instr = case x of
                                                   RegI t1'  -> ["li $v0, 4"] ++ ["move $a0, " ++ t1'] ++ ["syscall"]
-                                                  Stack t1' -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1') ++ "($sp)"] ++ ["syscall"]
+                                                  Stack t1' -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1') ++ "($fp)"] ++ ["syscall"]
                                nextStrings <- printMultiple xs
                                return (instr ++ nextStrings)

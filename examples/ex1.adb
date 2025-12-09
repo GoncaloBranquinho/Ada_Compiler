@@ -5,6 +5,7 @@ procedure Main is
   l : String := "EE";
 begin
   Get_Line(k,z);
+  put_line(k);
   k := "ola" & "adeus" & "sim";
   l := k & "sim" & "adeus" & "ola";
   k := l;
