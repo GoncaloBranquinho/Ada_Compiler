@@ -18,7 +18,7 @@ data Instr = MOVE String Temp Temp
            | PRINT Temp
            | READ Temp Temp
            | DECL Temp String
-           | TOSTR Temp Temp
+           | TOSTR String Temp Temp
            | BEGIN
            | END
            | WHILE
@@ -423,4 +423,5 @@ transExp (ToStr id) table dest = do t1 <- newTemp
                                     addTable t1 4 False
                                     code1 <- transExp (Var id) table t1
                                     popTemp 1
-                                    return (code1 ++ [TOSTR dest t1])
+                                    typ <- getVarTyp
+                                    return (code1 ++ [TOSTR typ dest t1])
