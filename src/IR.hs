@@ -21,7 +21,7 @@ data Instr = MOVE String Temp Temp
     deriving (Show, Eq)
 
 data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
-            | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT
+            | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT { val :: String}
     deriving (Show,Eq)  
 
 
@@ -373,7 +373,7 @@ transExp (Concat exp1 exp2) table dest = do t1 <- newTemp
                                             code1 <- transExp exp1 table t1
                                             code2 <- transExp exp2 table t2
                                             popTemp 2
-                                            return (code1 ++ code2 ++ [OP IR.CONCAT dest t1 t2])
+                                            return (code1 ++ code2 ++ [OP (IR.CONCAT "String") dest t1 t2])
 transExp (And exp1 exp2) table dest = do label1 <- newLabel
                                          label2 <- newLabel
                                          label3 <- newLabel

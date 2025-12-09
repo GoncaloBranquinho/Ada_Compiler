@@ -9,37 +9,25 @@ import GHC.Exts.Heap (GenClosure(value))
 import MemoryAllocator
 import Distribution.Simple.Utils (xargs)
 
+
 type Offset = Int
-type Counter = (Int, Int, [String], Addresses, ScpInfo, [Int], Content)
+type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content)
 type Addresses = Map.Map String [Location]
 type ValueInfo = [Location]
 type Content = Map.Map String ValueInfo
 
 
-
-
-
-newStackOffset :: Int -> State Counter Int
-newStackOffset n = do (offset, dataCounter, dataList, table, scpInfo, order,content) <- get
-                      put (offset + n, dataCounter, dataList, table, scpInfo, order,content)
-                      return offset
-
-
-popStackOffset :: Int -> State Counter ()
-popStackOffset n = do (offset, dataCounter, dataList, table, scpInfo,order,content) <- get
-                      put (offset - n, dataCounter, dataList, table, scpInfo, order,content)
-
 newData :: State Counter Int
-newData = do (offset, dataCounter, dataList, table, scpInfo, order,content) <- get
-             put (offset, dataCounter + 1, dataList, table, scpInfo, order,content)
-             return (dataCounter)
+newData = do (dataCounter, dataList, table, scpInfo, order,content) <- get
+             put (dataCounter + 1, dataList, table, scpInfo, order,content)
+             return dataCounter
 
 addData :: String -> State Counter ()
-addData str = do (offset, dataCounter, dataList, table, scpInfo, order,content) <- get
-                 put (offset, dataCounter, dataList ++ [str], table, scpInfo, order,content)
+addData str = do (dataCounter, dataList, table, scpInfo, order,content) <- get
+                 put (dataCounter, dataList ++ [str], table, scpInfo, order,content)
 
 getTable :: State Counter Addresses
-getTable = do (_, _, _, table, _, _,_) <- get
+getTable = do (_, _, table, _, _,_) <- get
               return table
 
 
@@ -50,7 +38,7 @@ nextLabel _ _ = False
 transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
-                                   (_, _, dataList, _, _, _,_) <- get
+                                   (_, dataList, _, _, _,_) <- get
                                    return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatOne ++ floatZero ++ dataList ++ [".text", "main:"] ++ code2 ++ readFun ++ printFun ++ putLineFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ exitProgram)
     where strBuf       = ["string_buffer: .space 1024"]
           strBufSize   = ["string_buffer_size: .half 1024"]
@@ -76,13 +64,13 @@ fillData (str:remainder) flt = do dataCounter <- newData
                                   fillData remainder flt
 
 getLocation :: String -> String -> State Counter Location
-getLocation str t = do (_, _, _,table,_,_,_) <- get
+getLocation str t = do (_, _,table,_,_,_) <- get
                        let (Just value) = Map.lookup str table
-                       if (length value) == 1 
+                       if (length value) == 1
                        then return (head value)
                        else case t of
-                                   "Integer" -> return (head value)
                                    "Float"   -> return (last value)
+                                   _         -> return (head value)
 
 getAddress :: Location -> State Counter String
 getAddress loc = case loc of
@@ -92,23 +80,23 @@ getAddress loc = case loc of
                           Global n -> return n
 
 changeContent :: String -> ValueInfo -> State Counter ()
-changeContent id val = do (offset, dataCounter, dataList, table, scpInfo, order, content) <- get
+changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content) <- get
                           let newContent = Map.insert id val content
-                          put (offset,dataCounter,dataList,table,scpInfo,order,content)
+                          put (dataCounter,dataList,table,scpInfo,order,content)
 
 getContent :: String -> State Counter ValueInfo
-getContent id = do (_,_,_,_,_,_,content) <- get
+getContent id = do (_,_,_,_,_,content) <- get
                    let val = Map.findWithDefault [] id content
                    return val
 
 
 
 free :: State Counter [String]
-free = do (offset, dataCounter, dataList, table, scpInfo, order, content) <- get
+free = do (dataCounter, dataList, table, scpInfo, order, content) <- get
           let scp = head order
           let (x, y, z) = Map.findWithDefault (0,0,0) scp scpInfo
           let order' = tail order
-          put (offset, dataCounter, dataList, table, scpInfo, order', content)
+          put (dataCounter, dataList, table, scpInfo, order', content)
           return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show z])
 
 transIR :: [Instr] -> State Counter [String]
@@ -174,91 +162,91 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            changeContent t1'' (t2''' ++ t3''')
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)   -> ["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, RegI _, RegI _)    -> ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, RegI _)     -> ["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"]
-                                                                                                                  ("Float", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3'']
-                                                                                                                  ("Float", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"]
-                                                                                                                  ("Float", RegI _, RegI _, RegI _)      -> ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Float", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegI _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegI _, RegI _)   -> ["add.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, RegF _, RegF _)    -> ["add.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["add " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"]
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3'']
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"]
+                                                                                                                  ("Integer", RegI _, RegI _, RegI _)      -> ["add " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
                                                                        SUB _  -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)   -> ["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, RegI _, RegI _)    -> ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, RegI _)     -> ["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"]
-                                                                                                                  ("Float", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3'']
-                                                                                                                  ("Float", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"]
-                                                                                                                  ("Float", RegI _, RegI _, RegI _)      -> ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Float", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)   -> ["sub.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, RegF _, RegF _)    -> ["sub.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ "$a0" ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ "$a1"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["sub " ++ "$a2" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ "$a1"]
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ "$a0" ++ ", " ++ t3'']
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$a1"]
+                                                                                                                  ("Integer", RegI _, RegI _, RegI _)      -> ["sub " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
                                                                        MULT _ -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)   -> ["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, RegI _, RegI _)    -> ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, RegI _)     -> ["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0, " ++ t3''] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, RegI _, RegI _)      -> ["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Float", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)   -> ["mul.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, RegF _, RegF _)    -> ["mul.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult $a0, $a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["mult $a0, " ++ t3''] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["mult " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, RegI _, RegI _)      -> ["mult " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
                                                                        DIV _  -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)   -> ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
-                                                                                                                  ("Integer", RegI _, RegI _, RegI _)    -> ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, RegI _)     -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0, " ++ t3''] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
-                                                                                                                  ("Float", RegI _, RegI _, RegI _)      -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Float", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)  -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)   -> ["div.s " ++ "$f14" ++ ", " ++ t2'' ++ ", " ++ t3''] ++ ["s.s $f14, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)  -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)   -> ["l.s $f12, " ++ t2'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ "$f12" ++ ", " ++ t3'']
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)   -> ["l.s $f13, " ++ t3'' ++ "($sp)"] ++ ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ "$f13"]
+                                                                                                                  ("Float", RegF _, RegF _, RegF _)    -> ["div.s " ++ t1'' ++ ", " ++ t2'' ++ ", " ++ t3'']
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0" ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div "++ t2'' ++ ", " ++ "$a1"] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo $a2"] ++ ["sw $a2, " ++ t1'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div $a0, $a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["div $a0, " ++ t3''] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["lw $a1, " ++ t3'' ++ "($sp)"] ++ ["div " ++ t2'' ++ ", " ++ "$a1"] ++ ["mflo " ++ t1'']
+                                                                                                                  ("Integer", RegI _, RegI _, RegI _)      -> ["div " ++ t2'' ++ ", " ++ t3''] ++ ["mflo " ++ t1'']
                                                                        POW t  -> case (convertedT, t1', t2', t3') of
-                                                                                                                  ("Integer", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, Stack _, RegI _)  -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Integer", Stack _, RegI _, Stack _)  -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", Stack _, RegI _, RegI _)   -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Integer", RegI _, Stack _, Stack _)  -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, Stack _, RegI _)   -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Integer", RegI _, RegI _, Stack _)   -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Integer", RegI _, RegI _, RegI _)    -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Float", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, Stack _, RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
-                                                                                                                  ("Float", Stack _, RegI _, Stack _)    -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", Stack _, RegI _, RegI _)     -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                                                                  ("Float", RegI _, Stack _, Stack _)    -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                                                                  ("Float", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
-                                                                                                                  ("Float", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
-                                                                       CONCAT -> []
+                                                                                                                  ("Float", Stack _, Stack _, Stack _) -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, Stack _, RegF _)  -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", Stack _, RegF _, Stack _)  -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Float", Stack _, RegF _, RegF _)   -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", RegF _, Stack _, Stack _)  -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, Stack _, RegF _)   -> ["mov.s $f12, " ++ t1''] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Float", RegF _, RegF _, Stack _)   -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["s.s $f0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Float", RegF _, RegF _, RegF _)    -> ["mov.s $f12, " ++ t1''] ++ ["mov.s $f13, " ++ t2''] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Integer", Stack _, Stack _, Stack _)   -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, Stack _, RegI _)    -> ["l.s $f12, " ++ t1'' ++ "($sp)"] ++ ["l.s $f13, " ++ t2'' ++ "($sp)"] ++ ["jal pow_float"] ++ ["mov.s " ++ t3'' ++ ", $f0"]
+                                                                                                                  ("Integer", Stack _, RegI _, Stack _)    -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Integer", Stack _, RegI _, RegI _)     -> ["lw $a0, " ++ t1'' ++ "($sp)"] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                                  ("Integer", RegI _, Stack _, Stack _)    -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($sp)"] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                                                                  ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t3'' ++ "($sp)"]
+                                                                                                                  ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal pow_int"] ++ ["move " ++ t3'' ++ ", $v0"]
+                                                                       CONCAT _ -> []
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
     where convertedT = (\x -> val x) opT
@@ -275,9 +263,9 @@ transIR ((MOVE t t1 t2):remainder) = do t1'   <- getLocation t1 t
                                                            ("Float", RegF _, Stack _)  -> ["l.s " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
                                                            ("Float", RegF _, RegF _)   -> ["mov.s " ++ t1'' ++ ", " ++ t2'']
                                                            (_, Stack _, Stack _)       -> ["lw $a0, " ++ t2'' ++ "($sp)"] ++ ["sw $a0, " ++ t1'' ++ "($sp)"]
-                                                           (_, Stack _, RegF _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
-                                                           (_, RegF _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
-                                                           (_, RegF _, RegF _)           -> ["move " ++ t1'' ++ ", " ++ t2'']
+                                                           (_, Stack _, RegI _)        -> ["sw " ++ t2'' ++ ", " ++ t1'' ++ "($sp)"]
+                                                           (_, RegI _, Stack _)        -> ["lw " ++ t1'' ++ ", " ++ t2'' ++ "($sp)"]
+                                                           (_, RegI _, RegI _)         -> ["move " ++ t1'' ++ ", " ++ t2'']
                                         instrNext <- transIR remainder
                                         return (instrExecute ++ instrNext)
 

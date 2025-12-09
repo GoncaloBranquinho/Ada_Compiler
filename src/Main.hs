@@ -11,6 +11,7 @@ import IR (transAST)
 import System.Exit (exitWith, ExitCode(..))
 import qualified Data.Map.Strict as Map
 import MemoryAllocator
+import CodeGen
 
 main :: IO ()
 main = do
@@ -58,6 +59,18 @@ main = do
             let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,0,Map.empty,Map.empty)
             print addresses
             print scopeInfo
+
+        [txt, "7"] -> do
+            input <- readFile txt 
+            let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
+            let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
+            let scopeList = Map.toList scopeTable
+            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,0,Map.empty,Map.empty)
+            let mipsCode = evalState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty)
+            mapM_ print mipsCode
+
+
+
 
 
 
