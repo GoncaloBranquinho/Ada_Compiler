@@ -49,18 +49,14 @@ type ErrorString = String
 type ErrorList = [(ErrorString, TypeST, TypeST)]
 type SymTabState = (SymTab, (ErrorList, ScopeMem))
 
-
 emptyST :: SymTabState
 emptyST = ([], ([], ([], ([], [0]))))
 
 bindST :: Name -> TypeST -> Assigned -> Bool -> State SymTabState SymTabState
 bindST n t a b = state (\s -> let x = (if b then n else (n ++ "@" ++ (show $ head $ snd $ snd $ snd $ snd s)), (t, a)) in ((x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if (b && ((read $ tail (dropWhile (\xs' -> xs' /= '@') n)) /= (head $ snd $ snd $ snd $ snd s))) then (((map (\xs -> (fst xs, x:(snd xs)))) $ takeWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd s)) ++ (map (\xs -> (fst xs, x:(snd xs))) ((\xs -> if (xs == []) then xs else ([head xs])) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) ++ ((\xs -> if (xs == []) then xs else (tail xs)) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s)))), (x:(fst s), (fst $ snd s, (fst $ snd $ snd s, (if (b && ((read $ tail (dropWhile (\xs' -> xs' /= '@') n)) /= (head $ snd $ snd $ snd $ snd s))) then (((map (\xs -> (fst xs, x:(snd xs)))) $ takeWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd s)) ++ (map (\xs -> (fst xs, x:(snd xs))) ((\xs -> if (xs == []) then xs else ([head xs])) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) ++ ((\xs -> if (xs == []) then xs else (tail xs)) $ dropWhile (\xs -> (fst xs) /= (read $ tail (dropWhile (\xs' -> xs' /= '@') n) :: Int)) (fst $ snd $ snd $ snd $ s))) else (fst $ snd $ snd $ snd s), snd $ snd $ snd $ snd s))))))
 
-
 enterScopeST :: State SymTabState SymTabState
---enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, ((1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s), fst s):(fst $ snd $ snd $ snd s), (head $ snd $ snd $ snd $ snd s):(snd $ snd $ snd $ snd s))))), (fst s, (fst $ snd s, (fst $ snd $ snd s, ((1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s), fst s):(fst $ snd $ snd $ snd s), (head $ snd $ snd $ snd $ snd s):(snd $ snd $ snd $ snd s)))))))
 enterScopeST = state (\s -> ((fst s, (fst $ snd s, (fst $ snd $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd $ snd s), (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)):(snd $ snd $ snd $ snd s))))), (fst s, (fst $ snd s, (fst $ snd $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd $ snd s), (1 + (length $ fst $ snd $ snd $ snd s) + (length $ fst $ snd $ snd s)):(snd $ snd $ snd $ snd s)))))))
-
 
 exitScopeST :: State SymTabState SymTabState
 exitScopeST = state (\s -> ((snd $ head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))), ((snd $ head $ fst $ snd $ snd $ snd s, (fst $ snd s, ((head $ snd $ snd $ snd $ snd s, fst s):(fst $ snd $ snd s), (tail $ fst $ snd $ snd $ snd s, tail $ snd $ snd $ snd $ snd s)))))))
@@ -69,8 +65,8 @@ lookUpST :: Name -> State SymTabState (Name, (TypeST, Assigned))
 lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))
 
 updateErrorTableST :: ErrorString -> TypeST -> TypeST -> State SymTabState SymTabState
-updateErrorTableST exp t1 t2 | t1 /= t2 = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
-                             | otherwise        = state (\s -> (s, s) )
+updateErrorTableST exp t1 t2 | t1 /= t2  = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
+                             | otherwise = state (\s -> (s, s) )
 
 buildSTProg :: Prog -> State SymTabState SymTabState
 buildSTProg (Prog d e) = buildSTDecl d >>= \t0 -> buildSTExec e >>= \t1 -> return t1
@@ -92,7 +88,7 @@ buildSTExec (Assign n exp) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (get) 
 buildSTExec (IfThenElse exp e1 e2) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e1 >>= \t2 -> buildSTExec e2 >>= \t3 -> return t3
 buildSTExec (WhileLoop exp e) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeBooleanST >>= \t1 -> buildSTExec e >>= \t2 -> return t2
 buildSTExec (PutLine exp) = typeCheck exp >>= \t0 -> updateErrorTableST (show exp) t0 TypeStringST >>= \t1 -> return t1
-buildSTExec (GetLine n1 n2) = lookUpST n1 >>= \t0 -> updateErrorTableST n1 (fst $ snd t0) TypeStringST >>= \t1 -> lookUpST n2 >>= \t2 -> updateErrorTableST n2 (fst $ snd t2) TypeIntegerST >>= \t3 -> return t3
+buildSTExec (GetLine n1 n2) = lookUpST n1 >>= \t0 -> updateErrorTableST n1 (fst $ snd t0) TypeStringST >>= \t1 -> if (snd $ snd t0) then (get) else (bindST (fst t0) (fst $ snd t0) True True) >>= \t2 -> lookUpST n2 >>= \t3 -> updateErrorTableST n2 (fst $ snd t3) TypeIntegerST >>= \t4 -> if (snd $ snd t3) then (get) else (bindST (fst t3) (fst $ snd t3) True True) >>= \t5 -> return t5
 buildSTExec (ExecComp e1 e2) = buildSTExec e1 >>= \t0 -> buildSTExec e2 >>= \t1 -> return t1
 buildSTExec (DeclBlock d e) = enterScopeST >>= \t0 -> buildSTDecl d >>= \t1 -> buildSTExec e >>= \t2 -> exitScopeST >>= \t3 -> return t3
 buildSTExec (EmptyExec) = get >>= \t0 -> return t0
@@ -117,7 +113,6 @@ removeJustType Nothing = ("", (TypeErrorST, False))
 nameToTypeST :: Name -> Code -> TypeST
 nameToTypeST n c = fst $ snd $ removeJustType $ (lookUpSymTab n) $ getSymTab c
 
-
 typeCheck :: Exp -> State SymTabState TypeST
 typeCheck TrueLit = return TypeBooleanST
 typeCheck FalseLit = return TypeBooleanST
@@ -139,7 +134,6 @@ typeCheck (Le e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (i
 typeCheck (Pow e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem t0 [TypeIntegerST, TypeFloatST] && t1 == TypeIntegerST) then t0 else TypeErrorST)
 typeCheck (Concat e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeStringST && t0 == t1) then TypeStringST else TypeErrorST)
 typeCheck (Not e1) = typeCheck e1 >>= \t0 -> return (if (t0 == TypeBooleanST) then TypeBooleanST else TypeErrorST)
-
 
 -- This main function can be used for debugging - or experimenting with - this program on GHCi (it's the acronym for Haskell's interpreter, for those unaware).
 
