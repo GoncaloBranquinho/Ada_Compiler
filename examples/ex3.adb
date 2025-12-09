@@ -5,7 +5,7 @@ procedure mAiN is
   result : Boolean;
 
 begin
-  result := x /= y;
+  result := (not (x = y)) and (x > -y) or (not b);
 
   if result then
     Put_Line("Resultado verdadeiro");

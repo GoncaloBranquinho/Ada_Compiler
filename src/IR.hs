@@ -17,6 +17,7 @@ data Instr = MOVE String Temp Temp
            | PRINT Temp
            | READ Temp Temp
            | DECL Temp String
+           | BEGIN
            | END
     deriving (Show, Eq)
 
@@ -169,7 +170,7 @@ transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
                                      (_,_,_,_,(setStr,setFlt),table,_,_, finishOrder) <- get
-                                     return (code1 ++ code2 ++ [IR.END],table, finishOrder,setStr,setFlt)
+                                     return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END],table, finishOrder,setStr,setFlt)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -273,7 +274,7 @@ transExec (DeclBlock decl exec) table = do newScope
                                            code2 <- transExec exec table
                                            addFinishOrder current
                                            exitScope parentScope
-                                           return (code1 ++ code2 ++ [IR.END])
+                                           return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END])
 transExec (Assign id exp) table = do scope <- getScope
                                      (newDest, _) <- getVarScope id (show scope) table
                                      code1 <- transExp exp table newDest
