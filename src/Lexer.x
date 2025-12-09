@@ -15,7 +15,7 @@ $white+                                    ;
 main                                       { \s -> MAIN }
 put_line                                   { \s -> PUTL }
 get_line                                   { \s -> GETL }
-string                                     { \s -> TO_STR }
+string                                     { \s -> TOSTR }
 integer                                    { \s -> INT }
 boolean                                    { \s -> BOOL }
 float                                      { \s -> FLOAT }
@@ -69,7 +69,7 @@ removerAspas (x:xs) = x:removerAspas xs
 data Token = MAIN
            | PUTL
            | GETL
-           | TO_STR
+           | TOSTR
            | INT
            | BOOL
            | FLOAT
