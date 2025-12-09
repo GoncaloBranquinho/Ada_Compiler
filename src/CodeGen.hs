@@ -347,3 +347,20 @@ printMultiple (Var t1:xs) = do x <- getLocation t1 "String"
                                                   Stack t1' -> ["li $v0, 4"] ++ ["lw $a0, " ++ (show t1') ++ "($fp)"] ++ ["syscall"]
                                nextStrings <- printMultiple xs
                                return (instr ++ nextStrings)
+
+transIR ((TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
+                                         t2' <- getLocation t2 t
+                                         t1'' <- getAddress t1'
+                                         t2'' <- getAddress t2'
+                                         let instrExec = case (t, t1', t2') of
+                                                                            ("Integer", Stack _, Stack _) -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
+                                                                            ("Integer", Stack _, RegI _)  -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
+                                                                            ("Integer", RegI _, Stack _)  -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
+                                                                            ("Integer", RegI _, RegI _)   -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
+                                                                            ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
+                                                                            ("Float", Stack _, RegI _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
+                                                                            ("Float", RegI _, Stack _)    -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
+                                                                            ("Float", RegI _, RegI _)     -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
+                                         instrNext <- transIR remainder
+                                         return (instrExec ++ instrNext)
+
