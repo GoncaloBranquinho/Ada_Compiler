@@ -30,7 +30,7 @@ data TypeST = TypeIntegerST
             | TypeFloatST
             | TypeStringST
             | TypeErrorST
-            | AssignErrorST
+            | TypeErrorST
     deriving (Show, Eq)
 
 convertType :: Type -> TypeST
@@ -65,8 +65,8 @@ lookUpST :: Name -> State SymTabState (Name, (TypeST, Assigned))
 lookUpST n = state (\s -> (removeJustType $ lookUpSymTab n (fst s), s))
 
 updateErrorTableST :: ErrorString -> TypeST -> TypeST -> State SymTabState SymTabState
-updateErrorTableST exp t1 t2 | t1 /= t2  = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
-                             | otherwise = state (\s -> (s, s) )
+updateErrorTableST exp t1 t2 | t1 /= t2 || t1 == TypeErrorST || t2 == TypeErrorST = state (\s -> ((fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s)), (fst s, ((exp, t1, t2):(fst $ snd s), snd $ snd s))))
+                             | otherwise                                          = state (\s -> (s, s) )
 
 buildSTProg :: Prog -> State SymTabState SymTabState
 buildSTProg (Prog d e) = buildSTDecl d >>= \t0 -> buildSTExec e >>= \t1 -> return t1
@@ -119,7 +119,7 @@ typeCheck FalseLit = return TypeBooleanST
 typeCheck (IntLit _) = return TypeIntegerST
 typeCheck (FloatLit _) = return TypeFloatST
 typeCheck (StringLit _) = return TypeStringST
-typeCheck (Var n) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (return (fst $ snd t0)) else (return AssignErrorST)
+typeCheck (Var n) = lookUpST n >>= \t0 -> if (snd $ snd t0) then (return (fst $ snd t0)) else (return TypeErrorST)
 typeCheck (Add e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
 typeCheck (Sub e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
 typeCheck (Mult e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then t1 else TypeErrorST)
