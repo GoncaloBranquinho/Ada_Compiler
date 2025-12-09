@@ -354,7 +354,7 @@ transIR ((IR.TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                                                                ("Integer", RegI _, Stack _)  -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
                                                                                ("Integer", RegI _, RegI _)   -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
-                                                                               ("Float", Stack _, RegI _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
+                                                                               ("Float", Stack _, RegF _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
                                                                                ("Float", RegF _, Stack _)    -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
                                                                                ("Float", RegF _, RegF _)     -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
                                             instrNext <- transIR remainder
