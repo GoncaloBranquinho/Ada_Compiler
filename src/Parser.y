@@ -11,6 +11,7 @@ import Lexer
       main        { MAIN }
       put_line    { PUTL }
       get_line    { GETL }
+      to_str      { TOSTR }
       integer     { INT }
       boolean     { BOOL }
       float       { FLOAT }
@@ -143,6 +144,7 @@ Factor     : integer_lit               { IntLit $1 }
            | true                      { TrueLit }
            | false                     { FalseLit }
            | "(" Exp ")"               { $2 }
+           | to_str "(" id ")"         { ToStr $3 }
 
 {
 
@@ -198,6 +200,7 @@ data Exp = TrueLit
          | Le Exp Exp
          | Not Exp
          | Concat Exp Exp
+         | ToStr String
     deriving (Show, Eq)
 
 }
