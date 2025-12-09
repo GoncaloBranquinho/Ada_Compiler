@@ -74,6 +74,7 @@ getLocation :: String -> String -> State Counter Location
 getLocation str t = do (_, _,table,_,_,_,_,_) <- get
                        let Just value = Map.lookup str table
                        if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
+    where t' = (\x -> if (t == "Floatt") then ("Float") else t) t
 
 getAddress :: Location -> State Counter String
 getAddress loc = case loc of
@@ -162,7 +163,8 @@ transIR ((JUMP l):remainder) = do code1 <- transIR remainder
                                   return (["j " ++ l] ++ code1)
 transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t2' <- getLocation t2 convertedT
-                                           t3' <- getLocation t3 convertedT
+                                           t3' <- case opT of POW _ -> do getLocation t3 (convertedT ++ (if (convertedT == "Float") then "t" else ""))
+                                                              _     -> do getLocation t3 convertedT
                                            t1'' <- getAddress t1'
                                            t2'' <- getAddress t2'
                                            t3'' <- getAddress t3'
