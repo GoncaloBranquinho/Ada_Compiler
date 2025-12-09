@@ -3,9 +3,10 @@ procedure Main is
   y : Float;
   z : Integer;
   p : String;
-  k : String := "ola";
+  k : String := "oSASASa";
 begin
-  k := k & k;
+  Get_Line(k,z);
+  k := "ola1" & "ola2" & "ola3" & k & "ola4";
   put_line(k);
 end Main;
 

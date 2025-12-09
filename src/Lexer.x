@@ -112,7 +112,16 @@ data Token = MAIN
            | FLOAT_LITERAL Float
     deriving (Eq, Show)
 
+toLowerCode :: String -> String
+toLowerCode [] = []
+toLowerCode ('"':xs) = '"':parseString xs
+  where
+    parseString [] = []
+    parseString ('"':rest) = '"':toLowerCode rest
+    parseString (c:rest) = c:parseString rest
+toLowerCode (c:cs) = toLower c:toLowerCode cs
+
 alexScanTokensInsensitive :: String -> [Token]
-alexScanTokensInsensitive = alexScanTokens . map toLower
+alexScanTokensInsensitive = alexScanTokens . toLowerCode
 
 }
