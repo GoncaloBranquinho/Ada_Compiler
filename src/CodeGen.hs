@@ -25,6 +25,10 @@ addData :: String -> State Counter ()
 addData str = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter) <- get
                  put (dataCounter, dataList ++ [str], table, scpInfo, order,content,curr,loopCounter)
 
+getLoopState :: State Counter Int
+getLoopState = do (_,_,_,_,_,_,_,loopCounter) <- get
+                  return loopCounter
+
 getTable :: State Counter Addresses
 getTable = do (_, _, table, _, _,_,_,_) <- get
               return table
@@ -164,7 +168,8 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t3'' <- getAddress t3'
                                            t2''' <- getContent t2
                                            t3''' <- getContent t3
-                                           changeContent t1 (t2''' ++ t3''')
+                                           loopCounter <- getLoopState
+                                           if loopCounter == 0 then (changeContent t1 (t2''' ++ t3''')) else (changeContent t1 [Var t1])
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
