@@ -38,6 +38,9 @@ type Label = String
 type Table = Map.Map Int [(String,Int,Bool)]
 type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int])
 
+emptyIR :: Count
+emptyIR = (0,0,0,"",([],[]),Map.empty,0,1,[])
+
 typeToString :: Type -> String
 typeToString TypeInteger = "Integer"
 typeToString TypeBoolean = "Boolean"

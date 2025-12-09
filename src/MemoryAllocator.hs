@@ -15,6 +15,9 @@ type Adresses = Map.Map String [Location]
 type ScpInfo = Map.Map Int (Int,Int,Int)
 type TableIR = [(Int, [(String,Int,Bool)])]
 
+emptyMem :: Count
+emptyMem = (0,2,0,Map.empty,Map.empty)
+
 newRegI :: State Count Reg
 newRegI = do (regI, regF, stackP, tbl, scpInfo) <- get
              put (regI+1, regF, stackP, tbl, scpInfo)
@@ -34,11 +37,6 @@ newRegF = do (regI,regF,stackP,tbl,scpInfo) <- get
 popRegF :: Int -> State Count ()
 popRegF n = do (regI,regF,stackP,tbl,scpInfo) <- get
                put (regI,regF-n,stackP,tbl,scpInfo)
-
-newStackP :: Int -> State Count Int
-newStackP n = do (regI,regF,stackP,tbl,scpInfo) <- get
-                 put (regI,regF,stackP+n,tbl,scpInfo)
-                 return stackP
 
 
 popStackP :: Int -> State Count ()
@@ -121,7 +119,7 @@ allocateReg scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
 allocateStack :: Int -> (String,Int,Bool) -> State Count ()
 allocateStack scp (id,bytes,isFloat) = do (regI,regF,stackP,tbl,scpInfo) <- get
                                           sInfo <- updateScp scp [3] bytes
-                                          let tbl' = Map.insertWith (++) id [Stack (stackP)] tbl
+                                          let tbl' = Map.insertWith (++) id [Stack (-stackP)] tbl
                                           put (regI,regF,stackP+bytes,tbl',sInfo)
 
 updateScp :: Int -> [Int] -> Int -> State Count ScpInfo

@@ -7,27 +7,26 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
 import GHC.Exts.Heap (GenClosure(value))
 import MemoryAllocator
-import Distribution.Simple.Utils (xargs)
 
 
 type Offset = Int
-type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int)
+type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int, Int)
 type Addresses = Map.Map String [Location]
 data ValueInfo = Lit String | Var String
   deriving (Show,Eq)
 type Content = Map.Map String [ValueInfo]
 
 newData :: State Counter Int
-newData = do (dataCounter, dataList, table, scpInfo, order,content,curr) <- get
-             put (dataCounter + 1, dataList, table, scpInfo, order,content,curr)
+newData = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter) <- get
+             put (dataCounter + 1, dataList, table, scpInfo, order,content,curr,loopCounter)
              return dataCounter
 
 addData :: String -> State Counter ()
-addData str = do (dataCounter, dataList, table, scpInfo, order,content,curr) <- get
-                 put (dataCounter, dataList ++ [str], table, scpInfo, order,content,curr)
+addData str = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter) <- get
+                 put (dataCounter, dataList ++ [str], table, scpInfo, order,content,curr,loopCounter)
 
 getTable :: State Counter Addresses
-getTable = do (_, _, table, _, _,_,_) <- get
+getTable = do (_, _, table, _, _,_,_,_) <- get
               return table
 
 
@@ -38,7 +37,7 @@ nextLabel _ _ = False
 transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
-                                   (_, dataList, _, _, _,_,_) <- get
+                                   (_, dataList, _, _, _,_,_,_) <- get
                                    return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatOne ++ floatZero ++ dataList ++ ["\n.text", "main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ readFun ++ putLineFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
     where strBuf       = ["string_buffer: .space 1024"]
           strBufSize   = ["string_buffer_size: .half 1024"]
@@ -63,7 +62,7 @@ fillData (str:remainder) flt = do dataCounter <- newData
                                   fillData remainder flt
 
 getLocation :: String -> String -> State Counter Location
-getLocation str t = do (_, _,table,_,_,_,_) <- get
+getLocation str t = do (_, _,table,_,_,_,_,_) <- get
                        let Just value = Map.lookup str table 
                        if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
 
@@ -75,28 +74,28 @@ getAddress loc = case loc of
                           Global n -> return n
 
 changeContent :: String -> [ValueInfo] -> State Counter ()
-changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content,curr) <- get
+changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter) <- get
                           let newContent = Map.insert id val content
-                          put (dataCounter,dataList,table,scpInfo,order,newContent,curr)
+                          put (dataCounter,dataList,table,scpInfo,order,newContent,curr,loopCounter)
 
 getContent :: String -> State Counter [ValueInfo]
-getContent id = do (_,_,_,_,_,content,_) <- get
+getContent id = do (_,_,_,_,_,content,_,_) <- get
                    let val = Map.findWithDefault [] id content
                    return val
 
 free :: State Counter [String]
-free = do (dataCounter, dataList, table, scpInfo, order, content,curr) <- get
+free = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter) <- get
           let scp = head order
           let (x, y, z) = Map.findWithDefault (0,0,0) scp scpInfo
           let order' = tail order
-          put (dataCounter, dataList, table, scpInfo, order', content,curr)
+          put (dataCounter, dataList, table, scpInfo, order', content,curr,loopCounter)
           return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show z])
 
 
 alloc :: State Counter [String]
-alloc = do (dataCounter, dataList, table, scpInfo, order, content, currScp) <- get
+alloc = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
            let (x,y,z) = Map.findWithDefault (0,0,0) currScp scpInfo
-           put (dataCounter,dataList,table,scpInfo,order,content,currScp+1)
+           put (dataCounter,dataList,table,scpInfo,order,content,currScp+1,loopCounter)
            return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show (-z)])
 
 
@@ -300,8 +299,12 @@ transIR (END:remainder) = do code1 <- free
                              return (code1 ++ code2)
 
 
-transIR (WHILE:remainder) = transIR remainder -- completar, se virmos um concat durante o while, avaliar a string e guardar o resultado no respetivo espaço da memória, e fazer changeContent t1 ([Var t1]) acho.
-transIR (ENDWHILE:remainder) = transIR remainder -- completar
+transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
+                               put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter+1)
+                               transIR remainder --se virmos um concat durante o while, avaliar a string e guardar o resultado no respetivo espaço da memória, e fazer changeContent t1 ([Var t1]) acho.
+transIR (ENDWHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
+                                  put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter-1)
+                                  transIR remainder
 
 transIR ((DECL t1 t):remainder) = do case t of
                                             "String" -> do t1'  <- getLocation t1 t

@@ -7,70 +7,40 @@ import Data.List
 import Control.Monad.State
 import SymbolTable
 import PrintAST (printAST)
-import IR (transAST)
+import IR 
 import System.Exit (exitWith, ExitCode(..))
 import qualified Data.Map.Strict as Map
 import MemoryAllocator
 import CodeGen
+import Lexer (alexScanTokensInsensitive)
 
 main :: IO ()
 main = do
     args <- getArgs
     case args of
-        [txt] -> do
-            input <- readFile txt
-            let ast = parse $ alexScanTokensInsensitive input
-            printAST ast
-        [txt, "1"] -> do
-            input <- readFile txt
-            print $ fst $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
-        [txt, "2"] -> do
-            input <- readFile txt
-            let scopes = fst $ snd $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
-                size = length scopes
-            putStrLn $ "A quantidade de âmbitos é (escolha um número de 0 a até ao total de âmbitos - 1, caso contrário mostra todos): " ++ show size
-            optStr <- getLine
-            let opt = read optStr :: Int
-            print (if opt >= 0 && opt < size then [scopes !! opt] else scopes)
-        [txt, "3"] -> do
-            input <- readFile txt
-            let (symtab, (errors, scopemem)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
-            print (symtab, (errors, scopemem))
-            if errors == []
-                then exitWith ExitSuccess
-                else exitWith (ExitFailure 1)
-        [txt, "4"] -> do
-            input <- readFile txt
-            print $ fst $ snd $ evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST
+        [txt] -> runCompiler txt
 
-        [txt, "5"] -> do 
-            input <- readFile txt 
-            let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
-            let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
-            mapM_ print code1
-            print scopeTable
-            print finishOrder
 
-        [txt, "6"] -> do
-            input <- readFile txt 
-            let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
-            let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
-            let scopeList = Map.toList scopeTable
-            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,32,Map.empty,Map.empty)
-            print addresses
-            print scopeInfo
+runCompiler :: FilePath -> IO ()
+runCompiler file = do input <- readFile file
+                      let ast = parse $ alexScanTokensInsensitive input
+                      let (symtab,(errors,scopemem)) = evalState (buildSTProg ast) emptyST
+                      writeFile (file ++ "AST.txt") (show ast)
+                      writeFile (file ++ "Table.txt") (show (symtab,(errors,scopemem)))
+                      if errors /= []
+                        then exitWith (ExitFailure 1)
+                        else do let (instr, scopesInfo, finishOrder, stringLits, floatLits) = evalState (transAST ast (symtab,scopemem)) emptyIR
+                                let scopesInfoList = Map.toList scopesInfo
+                                let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
+                                let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0)
+                                --let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty,0)
+                                --putStr $ show $ sxt $ snd $ m
+                                writeFile (file ++ "IR.txt")  (unlines $ map show instr)
+                                writeFile (file ++ "Addresses.txt") (show addresses)
+                                writeFile (file ++ "Mips.txt") (intercalate "\n" mipsCode)
+                                exitWith ExitSuccess
 
-        [txt, "7"] -> do
-            input <- readFile txt 
-            let (scope0,(_,table)) = evalState (buildSTProg $ parse $ alexScanTokensInsensitive input) emptyST 
-            let (code1, scopeTable, finishOrder, strs, flts) = evalState ((transAST $ parse $ alexScanTokensInsensitive input) (scope0,table)) (0, 0, 0, "", ([],[]), Map.empty, 0, 1, [])
-            let scopeList = Map.toList scopeTable
-            let (addresses,scopeInfo) = evalState (allocate scopeList finishOrder strs flts) (0,2,0,Map.empty,Map.empty)
-            let mipsCode = (intercalate "\n") $ (evalState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty,0))
-            putStr $ mipsCode
-            let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty,0)
-            putStr $ show $ sxt $ snd $ mipsCode
-          
+
 sxt :: (a, b, c, d, e, f, g) -> f
 sxt (_, _, _, _, _, x, _) = x
 
