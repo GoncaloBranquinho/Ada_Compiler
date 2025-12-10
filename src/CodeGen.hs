@@ -176,6 +176,8 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t3''' <- getContent t3
                                            loopCounter <- getLoopState
                                            if loopCounter == 0 then (changeContent t1 (t2''' ++ t3''')) else (changeContent t1 [Var t1])
+                                           concatM2 <- case opT of CONCAT _ -> if (loopCounter /= 0) then concatMultiple t2''' else return []; _ -> return [];
+                                           concatM3 <- case opT of CONCAT _ -> if (loopCounter /= 0) then concatMultiple t3''' else return []; _ -> return [];
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
@@ -263,8 +265,8 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                        CONCAT _ -> if loopCounter == 0 then [] else case t1' of
-                                                                                                                             Stack _   -> ["li $a3, 0"] ++ (concatMultiple t2'') ++ (concatMultiple t3'') ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
-                                                                                                                             RegI _    -> ["li $a3, 0"] ++ (concatMultiple t2'') ++ (concatMultiple t3'') ++ ["move " ++ t1'' ++ ", $a3"]
+                                                                                                                             Stack _   -> ["li $a3, 0"] ++ (concatM2) ++ (concatM3) ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                                             RegI _    -> ["li $a3, 0"] ++ (concatM2) ++ (concatM3) ++ ["move " ++ t1'' ++ ", $a3"]
                                                                                                                                         -- evaluation (fazer isto tambem quando estamos a comparar strings)
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
@@ -358,27 +360,30 @@ transIR ((IR.TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                             t1'' <- getAddress t1'
                                             t2'' <- getAddress t2'
                                             let instrExec = case (t, t1', t2') of
-                                                                               (_, Stack _, Stack _) -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
-                                                                               (_, Stack _, RegI _)  -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
-                                                                               (_, RegI _, Stack _)  -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
-                                                                               (_, RegI _, RegI _)   -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
                                                                                ("Float", Stack _, RegF _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
                                                                                ("Float", RegI _, Stack _)    -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["sw " ++ t1'' ++ "($fp)"]
                                                                                ("Float", RegI _, RegF _)     -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["move " ++ t1'' ++ ", $v0"]
+                                                                               (_, Stack _, Stack _)         -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
+                                                                               (_, Stack _, RegI _)          -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
+                                                                               (_, RegI _, Stack _)          -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw " ++ t1'' ++ "($fp)"]
+                                                                               (_, RegI _, RegI _)           -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                             instrNext <- transIR remainder
                                             return (instrExec ++ instrNext)
 
 concatMultiple :: [ValueInfo] -> State Counter [String]
-concatMultiple [] = []
+concatMultiple [] = return []
 concatMultiple ((Lit t1):xs) = do t1' <- getLocation t1 "String"
                                   t1'' <- getAddress t1'
-                                  return (["la $a2, " ++ t1''] ++ ["jal concat"])
+                                  instrNext <- concatMultiple xs
+                                  return (["la $a2, " ++ t1''] ++ ["jal concat"] ++ instrNext)
 concatMultiple ((Var t1):xs) = do t1' <- getLocation t1 "String"
                                   t1'' <- getAddress t1'
-                                  let instr = case t1' of
-                                                        Stack _ -> (["lw $a2, " ++ t1'' ++ "($fp)"] ++ ["jal concat"])
-                                                        RegI _  -> (["move $a2, " ++ t1''] ++ ["jal concat"])
+                                  instrNext <- concatMultiple xs
+                                  let instrExec = case t1' of
+                                                       Stack _ -> (["lw $a2, " ++ t1'' ++ "($fp)"] ++ ["jal concat"])
+                                                       RegI _  -> (["move $a2, " ++ t1''] ++ ["jal concat"])
+                                  return (instrExec ++ instrNext)
 
 printMultiple :: [ValueInfo] -> State Counter [String]
 printMultiple [] = return []
