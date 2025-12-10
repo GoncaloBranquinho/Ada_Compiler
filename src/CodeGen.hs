@@ -120,39 +120,49 @@ transIR ((COND opT t1 t2 l1 l2):remainder) = do t1'  <- getLocation t1 converted
                                                 t1'' <- getAddress t1'
                                                 t2'' <- getAddress t2'
                                                 let (instrAllocate, instrFixT1, instrFixT2) = case (convertedT, t1', t2') of
-                                                                                                ("Integer", Stack _, Stack _) -> (["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["lw $a1, " ++ t2'' ++ "($fp)"], "$a0", "$a1")
-                                                                                                ("Integer", Stack _, RegI _)  -> (["lw $a0, " ++ t1'' ++ "($fp)"], "$a0", t2'')
-                                                                                                ("Integer", RegI _, Stack _)  -> (["lw $a1, " ++ t2'' ++ "($fp)"], t1'', "$a1")
-                                                                                                ("Integer", RegI _, RegI _)   -> ([], t1'', t2'')
                                                                                                 ("Float", Stack _, Stack _)   -> (["l.s $f12, " ++ t1'' ++ "($fp)"] ++ ["l.s $f13, " ++ t2'' ++ "($fp)"], "$f12", "$f13")
                                                                                                 ("Float", Stack _, RegI _)    -> (["l.s $f12, " ++ t1'' ++ "($fp)"], "$f12", t2'')
                                                                                                 ("Float", RegI _, Stack _)    -> (["l.s $f13, " ++ t2'' ++ "($fp)"], t1'', "$f13")
                                                                                                 ("Float", RegI _, RegI _)     -> ([], t1'', t2'')
+                                                                                                ("String", Stack _, Stack _) -> (["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["lw $a1, " ++ t2'' ++ "($fp)"] ++ ["jal str_compare_eq"], "$v0", "$0")
+                                                                                                ("String", Stack _, RegI _)  -> (["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["move $a1, " ++ t2''] ++ ["jal str_compare_eq"], "$v0", "$0")
+                                                                                                ("String", RegI _, Stack _)  -> (["move $a0, " ++ t1''] ++ ["lw $a1, " ++ t2'' ++ "($fp)"] ++ ["jal str_compare_eq"], "$v0", "$0")
+                                                                                                ("String", RegI _, RegI _)   -> (["move $a0, " ++ t1''] ++ ["move $a1, " ++ t2''] ++ ["jal str_compare_eq"], "$v0", "$0")
+                                                                                                (_, Stack _, Stack _) -> (["lw $a0, " ++ t1'' ++ "($fp)"] ++ ["lw $a1, " ++ t2'' ++ "($fp)"], "$a0", "$a1")
+                                                                                                (_, Stack _, RegI _)  -> (["lw $a0, " ++ t1'' ++ "($fp)"], "$a0", t2'')
+                                                                                                (_, RegI _, Stack _)  -> (["lw $a1, " ++ t2'' ++ "($fp)"], t1'', "$a1")
+                                                                                                (_, RegI _, RegI _)   -> ([], t1'', t2'')
                                                 let instrExecute = if nextLabel remainder l2
                                                                    then case (opT, convertedT) of
-                                                                                               (IR.EQ _, "Integer") -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
                                                                                                (IR.EQ _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l1]
-                                                                                               (IR.NE _, "Integer") -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
+                                                                                               (IR.EQ _, "String")  -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
+                                                                                               (IR.EQ _, _)         -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
                                                                                                (IR.NE _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1f " ++ l1]
+                                                                                               (IR.NE _, "String")  -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
+                                                                                               (IR.NE _, _)         -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
                                                                                                (IR.LT _, "Integer") -> ["blt " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
                                                                                                (IR.LT _, "Float")   -> ["c.lt.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l1]
                                                                                                (IR.LE _, "Integer") -> ["ble " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1]
                                                                                                (IR.LE _, "Float")   -> ["c.le.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l1]
                                                                    else if nextLabel remainder l1
                                                                    then case (opT, convertedT) of
-                                                                                               (IR.EQ _, "Integer") -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
                                                                                                (IR.EQ _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1f " ++ l2]
-                                                                                               (IR.NE _, "Integer") -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
+                                                                                               (IR.EQ _, "String")  -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
+                                                                                               (IR.EQ _, _)         -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
                                                                                                (IR.NE _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l2]
+                                                                                               (IR.NE _, "String")  -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
+                                                                                               (IR.NE _, _)         -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
                                                                                                (IR.LT _, "Integer") -> ["bge " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
                                                                                                (IR.LT _, "Float")   -> ["c.lt.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1f " ++ l2]
                                                                                                (IR.LE _, "Integer") -> ["bgt " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l2]
                                                                                                (IR.LE _, "Float")   -> ["c.le.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1f " ++ l2]
                                                                    else case (opT, convertedT) of
-                                                                                               (IR.EQ _, "Integer") -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
                                                                                                (IR.EQ _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
-                                                                                               (IR.NE _, "Integer") -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.EQ _, "String")  -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.EQ _, _) -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
                                                                                                (IR.NE _, "Float")   -> ["c.eq.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1f " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.NE _, "String")  -> ["beq " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
+                                                                                               (IR.NE _, _) -> ["bne " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
                                                                                                (IR.LT _, "Integer") -> ["blt " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
                                                                                                (IR.LT _, "Float")   -> ["c.lt.s " ++ instrFixT1 ++ ", " ++ instrFixT2] ++ ["bc1t " ++ l1] ++ ["j " ++ l2]
                                                                                                (IR.LE _, "Integer") -> ["ble " ++ instrFixT1 ++ ", " ++ instrFixT2 ++ ", " ++ l1] ++ ["j " ++ l2]
