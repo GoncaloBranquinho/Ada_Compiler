@@ -6,9 +6,16 @@ procedure Main is
 begin
   Get_Line(k,z);
   put_line(k);
-  l := "ola" & "adeus" & "sim";
-  k := l & "sim" & "adeus" & "ola" & k;
+  l := "ola";
+  l := "ola";
+  l := "ola";
+  l := "ola";
+  l := "ola";
+  l := "ola";
+  l := "ola";
+  l := "adeus";
   l := k;
   put_line(l);
+  put_line(k);
 end Main;
 

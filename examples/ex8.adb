@@ -13,5 +13,6 @@ begin
   put_line(k);
   z := 3.4234174**21;
   p := str(z);
+  p := p & "ola";
   put_line(p);
 end Main;

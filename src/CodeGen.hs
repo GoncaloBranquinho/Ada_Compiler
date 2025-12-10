@@ -359,6 +359,7 @@ transIR ((IR.TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                             t2' <- getLocation t2 t
                                             t1'' <- getAddress t1'
                                             t2'' <- getAddress t2'
+                                            changeContent t1 ([Var t1])
                                             let instrExec = case (t, t1', t2') of
                                                                                ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["s.s " ++ t1'' ++ "($fp)"]
                                                                                ("Float", Stack _, RegF _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]

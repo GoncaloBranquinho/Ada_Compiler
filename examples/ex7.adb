@@ -1,10 +1,11 @@
 procedure Main is
-  z : Integer := 3;
-  x : Integer := 0;
+  z : Integer := 0;
+  x : Integer := 3;
 begin
-  while (z > 0) loop
-    z := z-1;
-    x := x + 1;
+  while (x > 0) loop
+    x := x-1;
+    z := z+1;
   end loop;
-  put_line(str(x));
+  put_line(str(z));
 end Main;
+

@@ -4,6 +4,7 @@ import Lexer
 import Parser
 import Data.List
 import Control.Monad.State
+import Control.Monad (when)
 import SymbolTable
 import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
@@ -27,7 +28,7 @@ data Instr = MOVE String Temp Temp
 
 data BinOp = ADD { val :: String } | SUB { val :: String } | MULT { val :: String } | DIV { val :: String } | POW { val :: String } | AND
             | OR | XOR | EQ { val :: String } | NE { val :: String } | LT { val :: String } | LE { val :: String } | CONCAT { val :: String}
-    deriving (Show,Eq)  
+    deriving (Show,Eq)
 
 
 data Literal = TInt Int | TDouble Float | TString String
@@ -37,10 +38,10 @@ data Literal = TInt Int | TDouble Float | TString String
 type Temp = String
 type Label = String
 type Table = Map.Map Int [(String,Int,Bool)]
-type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int])
+type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int], Int, Int, Map.Map Int [Temp])
 
 emptyIR :: Count
-emptyIR = (0,0,0,"",([],[]),Map.empty,0,1,[])
+emptyIR = (0,0,0,"",([],[]),Map.empty,0,1,[],-1,0, Map.empty)
 
 typeToString :: Type -> String
 typeToString TypeInteger = "Integer"
@@ -56,67 +57,87 @@ typeToOffset TypeString  = 4
 
 
 newTemp :: State Count Temp
-newTemp = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder) <- get
-             put (temps+1, labels, scope, typ, setString, table, currScopeMips, nextScopeMips,finishOrder)
+newTemp = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+             put (temps+1, labels, scope, typ, setString, table, currScopeMips, nextScopeMips,finishOrder,currWhile,nextWhile,whileMap)
              return ("_t" ++ show temps ++ "@" ++ show currScopeMips)
 
 popTemp :: Int -> State Count ()
-popTemp n = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder) <- get
-               put (temps-n, labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder)
+popTemp n = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+               put (temps-n, labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 newLabel :: State Count Label
-newLabel = do (temps,labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder) <- get
-              put (temps, labels+1, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder)
+newLabel = do (temps,labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+              put (temps, labels+1, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
               return ("label" ++ show labels)
 
 newScope :: State Count ()
-newScope = do (temps, labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder) <- get
-              put (temps, labels, scope+1, typ, setString, table,currScopeMips, nextScopeMips, finishOrder)
+newScope = do (temps, labels, scope, typ, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+              put (temps, labels, scope+1, typ, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 newScopeMips :: State Count ()
-newScopeMips = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder) <- get
-                  put (temps, labels, scope, typ, setString, table, currScopeMips+1, nextScopeMips, finishOrder)
+newScopeMips = do (temps, labels, scope, typ, setString, table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+                  put (temps, labels, scope, typ, setString, table, currScopeMips+1, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 newTyp :: String -> State Count ()
-newTyp str = do (temps, labels, scope, _, setString, table,currScopeMips, nextScopeMips, finishOrder) <- get
-                put (temps, labels, scope, str, setString, table,currScopeMips, nextScopeMips, finishOrder)
+newTyp str = do (temps, labels, scope, _, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+                put (temps, labels, scope, str, setString, table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 getVarTyp :: State Count String
-getVarTyp = do (_,_,_, typ,_,_,_,_,_) <- get
+getVarTyp = do (_,_,_, typ,_,_,_,_,_,_,_,_) <- get
                return typ
 
 
 getCurrScopeMips :: State Count Int
-getCurrScopeMips = do (_,_,_,_,_,_,currScopeMips,_,_) <- get
+getCurrScopeMips = do (_,_,_,_,_,_,currScopeMips,_,_,_,_,_) <- get
                       return currScopeMips
 
 
 enterScope :: State Count Int
-enterScope = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder) <- get
-                put (temps,labels,scope,typ,setString, table,nextScopeMips,nextScopeMips+1, finishOrder)
+enterScope = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+                put (temps,labels,scope,typ,setString, table,nextScopeMips,nextScopeMips+1, finishOrder,currWhile,nextWhile,whileMap)
                 return nextScopeMips
 
 exitScope :: Int -> State Count ()
-exitScope parentScope = do (temps,labels,scope,typ,setString, table,_,nextScopeMips,finishOrder) <- get
-                           put (temps,labels,scope,typ,setString, table,parentScope,nextScopeMips, finishOrder)
+exitScope parentScope = do (temps,labels,scope,typ,setString, table,_,nextScopeMips,finishOrder,currWhile,nextWhile,whileMap) <- get
+                           put (temps,labels,scope,typ,setString, table,parentScope,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 
 
+enterWhile :: State Count Int
+enterWhile = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+                put (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder,nextWhile,nextWhile+1,whileMap)
+                return nextWhile
+
+exitWhile :: Int -> State Count ()
+exitWhile parentWhile = do (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips,finishOrder,_,nextWhile,whileMap) <- get
+                           put (temps,labels,scope,typ,setString, table,currScopeMips,nextScopeMips, finishOrder,parentWhile,nextWhile,whileMap)
+
+
+getCurrWhile :: State Count Int
+getCurrWhile = do (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
+                  return currWhile
+
+addWhile :: Temp -> State Count ()
+addWhile id = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
+                 let whileInfo = Map.findWithDefault [] currWhile whileMap
+                 let whileInfo' = whileInfo ++ (if (elem id whileInfo) then [] else [id])
+                 let newMap = Map.insert currWhile whileInfo' whileMap
+                 put (temps,labels,scope,typ, (setString,setFloat), table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,newMap)
 
 addSet :: String -> State Count ()
-addSet str = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder) <- get
+addSet str = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
                 if (elem str setString)
                   then return ()
-                  else put (temps,labels,scope,typ, (setString ++ [str],setFloat), table, currScopeMips, nextScopeMips, finishOrder)
+                  else put (temps,labels,scope,typ, (setString ++ [str],setFloat), table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 addSetFloat :: Float -> State Count ()
-addSetFloat num = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder) <- get
+addSetFloat num = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
                      if (elem num setFloat)
                         then return ()
-                        else put (temps,labels,scope,typ, (setString,setFloat++[num]), table, currScopeMips, nextScopeMips, finishOrder)
+                        else put (temps,labels,scope,typ, (setString,setFloat++[num]), table, currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 
@@ -125,17 +146,17 @@ addSetFloat num = do (temps,labels,scope,typ,(setString,setFloat), table,currSco
 
 
 addTable :: String -> Int -> Bool -> State Count ()
-addTable str offset isFloat = do (temps,labels,scope,typ,setString,table,currScopeMips, nextScopeMips, finishOrder) <- get
+addTable str offset isFloat = do (temps,labels,scope,typ,setString,table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
                                  let scopeList = Map.findWithDefault [] currScopeMips table
                                  let newScopeList = if (any (\(s,_,_) -> s == str) scopeList)
                                                       then scopeList
                                                       else (scopeList ++ [(str,offset,isFloat)])
-                                 put (temps,labels,scope,typ,setString,Map.insert currScopeMips newScopeList table,currScopeMips, nextScopeMips, finishOrder)
+                                 put (temps,labels,scope,typ,setString,Map.insert currScopeMips newScopeList table,currScopeMips, nextScopeMips, finishOrder,currWhile,nextWhile,whileMap)
 
 
 addFinishOrder :: Int -> State Count ()
-addFinishOrder n = do (temps,labels,scope,typ,setString,table,currScopeMips,nextScopeMips,finishOrder) <- get
-                      put (temps,labels,scope,typ,setString,table,currScopeMips,nextScopeMips,finishOrder ++ [n])
+addFinishOrder n = do (temps,labels,scope,typ,setString,table,currScopeMips,nextScopeMips,finishOrder,currWhile,nextWhile,whileMap) <- get
+                      put (temps,labels,scope,typ,setString,table,currScopeMips,nextScopeMips,finishOrder ++ [n],currWhile,nextWhile,whileMap)
 
 typToString :: TypeST -> String
 typToString TypeIntegerST = "Integer"
@@ -167,12 +188,12 @@ searchID id1 ((temp,(typ,_)):rest) = do let id2 = takeWhile (\x -> x /= '@') tem
                                           else 
                                               searchID id1 rest
 
-transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int],[String],[Float])
+transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int],[String],[Float],Map.Map Int [Temp])
 transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
-                                     (_,_,_,_,(setStr,setFlt),table,_,_, finishOrder) <- get
-                                     return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END],table, finishOrder,setStr,setFlt)
+                                     (_,_,_,_,(setStr,setFlt),table,_,_, finishOrder,_,_,whileInfo) <- get
+                                     return ([IR.BEGIN] ++ code1 ++ code2 ++ [IR.END],table, finishOrder,setStr,setFlt,whileInfo)
 
 transDecl :: Decl -> (SymTab, ScopeMem) -> State Count [Instr]
 transDecl EmptyDecl table = return []
@@ -188,7 +209,7 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
                                             let newTyp = typeToString typ
-                                            let decls = map (\v -> DECL v typString) idsList 
+                                            let decls = map (\v -> DECL v typString) idsList
                                             let moves = map (\v -> MOVE newTyp v t1) idsList
                                             popTemp 1
                                             return (decls ++ code1 ++ moves)
@@ -295,8 +316,11 @@ transExec (IfThenElse cond exec1 exec2) table = do label1 <- newLabel
 transExec (WhileLoop cond exec) table = do label1 <- newLabel
                                            label2 <- newLabel
                                            label3 <- newLabel
+                                           parentWhile <- getCurrWhile
+                                           current <- enterWhile
                                            code1 <- transCond cond table label2 label3
                                            code2 <- transExec exec table
+                                           exitWhile parentWhile
                                            return ([IR.WHILE] ++ [LABEL label1] ++ code1 ++ [LABEL label2] ++ code2 ++ [JUMP label1, LABEL label3, ENDWHILE])
 transExec (PutLine exp) table = do t1 <- newTemp
                                    addTable t1 4 False
@@ -380,6 +404,10 @@ transExp (Concat exp1 exp2) table dest = do t1 <- newTemp
                                             t2 <- newTemp
                                             addTable t1 4 False
                                             addTable t2 4 False
+                                            (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
+                                            when (currWhile >= 0) $ do
+                                              addWhile t1
+                                              addWhile t2
                                             code1 <- transExp exp1 table t1
                                             code2 <- transExp exp2 table t2
                                             popTemp 2
