@@ -41,7 +41,7 @@ transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
                                    (_, dataList, _, _, _,_,_,_) <- get
-                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen ++ floatNineZeros ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ strCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ boolToString ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
+                                   return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen ++ floatNineZeros ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ strCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ boolToStringFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
     where strBuf          = ["string_buffer: .space 1024"]
           strBufSize      = ["string_buffer_size: .half 1024"]
           powOvrFlwMsg    = ["pow_overflow_str: .asciiz \"Erro: overflow na funcao exponencial!\\n\""]
