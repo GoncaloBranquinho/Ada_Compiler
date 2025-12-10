@@ -426,8 +426,8 @@ transExp (Not cond1) table dest = do label1 <- newLabel
                                      return (code1 ++ [LABEL label1, MOVEI dest (TInt 1), JUMP label3, LABEL label2, MOVEI dest (TInt 0), LABEL label3])
 
 transExp (ToStr exp) table dest = do t1 <- newTemp
-                                    addTable t1 4 False
-                                    code1 <- transExp (exp) table t1
-                                    popTemp 1
-                                    typ <- getVarTyp
-                                    return (code1 ++ [IR.TOSTR typ dest t1])
+                                     addTable t1 4 False
+                                     code1 <- transExp (exp) table t1
+                                     popTemp 1
+                                     typ <- getVarTyp
+                                     return (code1 ++ [IR.TOSTR typ dest t1])
