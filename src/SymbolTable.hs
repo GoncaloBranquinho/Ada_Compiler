@@ -126,7 +126,7 @@ typeCheck (Div e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (
 typeCheck (And e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeBooleanST && t0 == t1) then TypeBooleanST else TypeErrorST)
 typeCheck (Or e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeBooleanST && t0 == t1) then TypeBooleanST else TypeErrorST)
 typeCheck (XOr e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (t0 == TypeBooleanST && t0 == t1) then TypeBooleanST else TypeErrorST)
-typeCheck (Eq e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST, TypeBooleanST] && t0 == t1) then TypeBooleanST else TypeErrorST)
+typeCheck (Eq e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST, TypeBooleanST, TypeStringST] && t0 == t1) then TypeBooleanST else TypeErrorST)
 typeCheck (Ne e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST, TypeBooleanST] && t0 == t1) then TypeBooleanST else TypeErrorST)
 typeCheck (Lt e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then TypeBooleanST else TypeErrorST)
 typeCheck (Le e1 e2) = typeCheck e1 >>= \t0 -> typeCheck e2 >>= \t1 -> return (if (elem (t0) [TypeIntegerST, TypeFloatST] && t0 == t1) then TypeBooleanST else TypeErrorST)
