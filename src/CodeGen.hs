@@ -258,7 +258,8 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t2''] ++ ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                                                   ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
-                                                                       CONCAT _ -> []
+                                                                       CONCAT _ -> if loopCounter == 0 then [] else case (t1',t2',t3') of
+                                                                                                                                        -- evaluation (fazer isto tambem quando estamos a comparar strings)
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
     where convertedT = (\x -> val x) opT

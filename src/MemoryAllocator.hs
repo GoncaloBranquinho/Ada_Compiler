@@ -68,10 +68,7 @@ allocate ((scp, content):remainder) (scp':nextScps) xs ys = do allocateScope scp
                                                                allocate remainder scps xs ys
 
 allocateLits :: [String] -> [Float] -> Int -> State Count ()
-allocateLits [] [] _ = do (regI,regF,stackP,tbl,scpInfo) <- get
-                          let tbl' = Map.insertWith (++) ("0") [RegI "$zero"] tbl
-                          put (regI,regF,stackP,tbl',scpInfo) 
-                          return ()
+allocateLits [] [] _ = return ()
 allocateLits [] (flt:flts) n = do (regI,regF,stackP,tbl,scpInfo) <- get
                                   let tbl' = Map.insertWith (++) (show flt) [Global ("flt" ++ show n)] tbl
                                   put (regI,regF,stackP,tbl',scpInfo)

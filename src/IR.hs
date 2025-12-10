@@ -262,10 +262,11 @@ transCond (Or cond1 cond2) table labelt labelf = do label1 <- newLabel
 transCond (XOr cond1 cond2) table labelt labelf = do code1 <- transCond (Or (And cond1 (Not cond2)) (And (Not cond1) cond2)) table labelt labelf
                                                      return code1
 transCond (Var id) table labelt labelf = do t1 <- newTemp
+                                            t2 <- newTemp
                                             addTable t1 4 False
                                             code1 <- transExp (Var id) table t1
-                                            popTemp 1
-                                            return (code1 ++ [COND (NE "Integer") t1 "0" labelt labelf])
+                                            popTemp 2
+                                            return (code1 ++ [MOVEI t2 (TInt 0)] ++ [COND (NE "Integer") t1 t2 labelt labelf])
 
 transExec :: Exec -> (SymTab, ScopeMem) -> State Count [Instr]
 transExec EmptyExec _ = return []

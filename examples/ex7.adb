@@ -1,14 +1,10 @@
 procedure Main is
-  x : Float := 3.2;
-  y : String := "o";
-  z : Integer;
-  p : String;
-  k : String := "";
+  z : Integer := 3;
+  x : Integer := 0;
 begin
-  get_line(p, z);
   while (z > 0) loop
-    z := z - 1;
-    k := p & y;
+    z := z-1;
+    x := x + 1;
   end loop;
-  put_line(k);
+  put_line(str(x));
 end Main;
