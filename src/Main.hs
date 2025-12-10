@@ -32,7 +32,7 @@ runCompiler file = do input <- readFile file
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
-                                let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0)
+                                let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips code1 strs flts) (0,[],addresses,scopeInfo,finishOrder,Map.empty,0)
                                 --putStr $ show $ sxt $ snd $ m
                                 writeFile (file ++ "IR.txt")  ((unlines $ map show instr) ++ show whileInfo)

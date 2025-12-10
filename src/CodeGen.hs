@@ -1,5 +1,4 @@
 module CodeGen where
-
 import IR
 import SymbolTable
 import Control.Monad.State
@@ -10,27 +9,27 @@ import MemoryAllocator
 
 
 type Offset = Int
-type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int, Int)
+type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int, Int, Map.Map Int [String])
 type Addresses = Map.Map String [Location]
 data ValueInfo = Lit String | Var String
   deriving (Show,Eq)
 type Content = Map.Map String [ValueInfo]
 
 newData :: State Counter Int
-newData = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter) <- get
-             put (dataCounter + 1, dataList, table, scpInfo, order,content,curr,loopCounter)
+newData = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter,whileInfo) <- get
+             put (dataCounter + 1, dataList, table, scpInfo, order,content,curr,loopCounter,whileInfo)
              return dataCounter
 
 addData :: String -> State Counter ()
-addData str = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter) <- get
-                 put (dataCounter, dataList ++ [str], table, scpInfo, order,content,curr,loopCounter)
+addData str = do (dataCounter, dataList, table, scpInfo, order,content,curr,loopCounter,whileInfo) <- get
+                 put (dataCounter, dataList ++ [str], table, scpInfo, order,content,curr,loopCounter,whileInfo)
 
 getLoopState :: State Counter Int
-getLoopState = do (_,_,_,_,_,_,_,loopCounter) <- get
+getLoopState = do (_,_,_,_,_,_,_,loopCounter,whileInfo) <- get
                   return loopCounter
 
 getTable :: State Counter Addresses
-getTable = do (_, _, table, _, _,_,_,_) <- get
+getTable = do (_, _, table, _, _,_,_,_,_) <- get
               return table
 
 nextLabel :: [Instr] -> String -> Bool
@@ -40,7 +39,7 @@ nextLabel _ _ = False
 transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
-                                   (_, dataList, _, _, _,_,_,_) <- get
+                                   (_, dataList, _, _, _,_,_,_,_) <- get
                                    return ([".data"] ++ strBuf ++ strBufSize ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen ++ floatNineZeros ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ dynamicStrCompareEq ++ staticStrCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ boolToStringFun ++ powIntFun ++ powFloatFun ++ powOverflow ++ programEnd)
     where strBuf              = ["string_buffer: .space 1024"]
           strBufSize          = ["string_buffer_size: .half 1024"]
@@ -76,7 +75,7 @@ fillData (str:remainder) flt = do dataCounter <- newData
                                   fillData remainder flt
 
 getLocation :: String -> String -> State Counter Location
-getLocation str t = do (_, _,table,_,_,_,_,_) <- get
+getLocation str t = do (_, _,table,_,_,_,_,_,_) <- get
                        let Just value = Map.lookup str table
                        if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
     where t' = (\x -> if (t == "Floatt") then ("Float") else t) t
@@ -89,28 +88,28 @@ getAddress loc = case loc of
                           Global n -> return n
 
 changeContent :: String -> [ValueInfo] -> State Counter ()
-changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter) <- get
+changeContent id val = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter,whileInfo) <- get
                           let newContent = Map.insert id val content
-                          put (dataCounter,dataList,table,scpInfo,order,newContent,curr,loopCounter)
+                          put (dataCounter,dataList,table,scpInfo,order,newContent,curr,loopCounter,whileInfo)
 
 getContent :: String -> State Counter [ValueInfo]
-getContent id = do (_,_,_,_,_,content,_,_) <- get
+getContent id = do (_,_,_,_,_,content,_,_,_) <- get
                    let val = Map.findWithDefault [] id content
                    return val
 
 free :: State Counter [String]
-free = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter) <- get
+free = do (dataCounter, dataList, table, scpInfo, order, content,curr,loopCounter,whileInfo) <- get
           let scp = head order
           let (x, y, z) = Map.findWithDefault (0,0,0) scp scpInfo
           let order' = tail order
-          put (dataCounter, dataList, table, scpInfo, order', content,curr,loopCounter)
+          put (dataCounter, dataList, table, scpInfo, order', content,curr,loopCounter,whileInfo)
           return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show z])
 
 
 alloc :: State Counter [String]
-alloc = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
+alloc = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
            let (x,y,z) = Map.findWithDefault (0,0,0) currScp scpInfo
-           put (dataCounter,dataList,table,scpInfo,order,content,currScp+1,loopCounter)
+           put (dataCounter,dataList,table,scpInfo,order,content,currScp+1,loopCounter,whileInfo)
            return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show (-z)])
 
 
@@ -275,10 +274,19 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t2''] ++ ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                                                   ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
-                                                                       CONCAT _ -> if loopCounter == 0 then [] else case t1' of
-                                                                                                                             Stack _   -> ["li $a3, 0"] ++ (concatM2) ++ (concatM3) ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
-                                                                                                                             RegI _    -> ["li $a3, 0"] ++ (concatM2) ++ (concatM3) ++ ["move " ++ t1'' ++ ", $a3"]
-                                                                                                                                        -- evaluation (fazer isto tambem quando estamos a comparar strings)
+-- t2 -> $a3, t3 -> $a2, $a3 -> t1, -8($a3) -> $a0, -4($a3) -> $a1
+                                                                       CONCAT _ -> if loopCounter == 0
+                                                                                   then []
+                                                                                   else case (t1', t2', t3') of
+                                                                                                             (Stack _, Stack _, Stack _) -> ["lw $a2, " ++ t3'' ++ "($fp)"] ++ ["lw $a3, " ++ t2'' ++ "($fp)"] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                             (Stack _, Stack _, RegI _)  -> ["move $a2, " ++ t3''] ++ ["lw $a3, " ++ t2'' ++ "($fp)"] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                             (Stack _, RegI _, Stack _)  -> ["lw $a2, " ++ t3'' ++ "($fp)"] ++ ["move $a3, " ++ t2''] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                             (Stack _, RegI _, RegI _)   -> ["move $a2, " ++ t3''] ++ ["move $a3, " ++ t2''] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                             (RegI _, Stack _, Stack _)  -> ["lw $a2, " ++ t3'' ++ "($fp)"] ++ ["lw $a3, " ++ t2'' ++ "($fp)"] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["move " ++ t1'' ++ ", $a3"]
+                                                                                                             (RegI _, Stack _, RegI _)   -> ["move $a2, " ++ t3''] ++ ["lw $a3, " ++ t2'' ++ "($sp)"] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["move " ++ t1'' ++ ", $a3"]
+                                                                                                             (RegI _, RegI _, Stack _)   -> ["lw $a2, " ++ t3'' ++ "($sp)"] ++ ["move $a3, " ++ t2''] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["move " ++ t1'' ++ ", $a3"]
+                                                                                                             (RegI _, RegI _, RegI _)    -> ["move $a2, " ++ t3''] ++ ["move $a3, " ++ t2''] ++ ["lw $a0, -8($a3)"] ++ ["lw $a1, -4($a3)"] ++ ["jal concat"] ++ ["move " ++ t1'' ++ ", $a3"]
+                                                                                                                                                                                                                                                     -- evaluation (fazer isto tambem quando estamos a comparar strings)
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
     where convertedT = (\x -> val x) opT
@@ -331,11 +339,14 @@ transIR (END:remainder) = do code1 <- free
                              return (code1 ++ code2)
 
 
-transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
-                               put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter+1)
-                               transIR remainder --se virmos um concat durante o while, avaliar a string e guardar o resultado no respetivo espaço da memória, e fazer changeContent t1 ([Var t1]) acho.
-transIR (ENDWHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter) <- get
-                                  put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter-1)
+transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
+                               put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter+1,whileInfo)
+                               let currWhile = Map.findWithDefault [] loopCounter whileInfo
+                               code1 <- (mapM (\x -> get >>= \t0 -> getLocation x "String" >>= \t1 -> getAddress t1 >>= \t2 -> getContent t2 >>= \t3 -> concatMultiple t3 >>= \t4 -> return (["li $a3, 0"] ++ t4)) currWhile) >>= \t5 -> return (concat t5)
+                               code2 <- transIR remainder
+                               return (code1 ++ code2)
+transIR (ENDWHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
+                                  put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter-1,whileInfo)
                                   transIR remainder
 
 transIR ((DECL t1 t):remainder) = do case t of
