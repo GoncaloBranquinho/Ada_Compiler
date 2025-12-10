@@ -265,13 +265,6 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                        CONCAT _ -> if loopCounter == 0 then [] else case t1' of
                                                                                                                              Stack _   -> ["li $a3, 0"] ++ (concatMultiple t2'') ++ (concatMultiple t3'') ++ ["sw $a3, " ++ t1'' ++ "($fp)"]
                                                                                                                              RegI _    -> ["li $a3, 0"] ++ (concatMultiple t2'') ++ (concatMultiple t3'') ++ ["move " ++ t1'' ++ ", $a3"]
-                                                                       li $a3, 0 <- o começo do buffer
-                                                                       jal f
-                                                                       $a2 -> aquilo que vai concatenar
-                                                                       $a0 -> tamanho do buffer
-                                                                       $a1 -> o ponto atual do buffer
-                                                                       
-                                                                       
                                                                                                                                         -- evaluation (fazer isto tambem quando estamos a comparar strings)
                                            instrNext <- transIR remainder
                                            return (instrExecute ++ instrNext)
