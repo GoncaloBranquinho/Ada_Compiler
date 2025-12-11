@@ -17,6 +17,26 @@ str0: .asciiz "ola"
 move $fp, $sp
 li $t1, 3
 move $t2, $t1
+li $a3, 0
+la $a2, str0
+jal concat
+move $t1, $a3
+li $a3, 0
+la $a2, str0
+jal concat
+move $t1, $a3
+li $a3, 0
+move $a2, $t1
+jal concat
+move $t1, $a2
+li $a3, 0
+la $a2, str0
+jal concat
+move $t3, $a3
+li $a3, 0
+move $a2, $t3
+jal concat
+move $t3, $a2
 label0:
 li $t1, 0
 move $t3, $t2
@@ -24,10 +44,17 @@ bge $t1, $t3, label2
 label1:
 move $t1, $t2
 li $t3, 1
+sub $t2, $t1, $t3
+move $a2, $t3
+move $a3, $t1
+lw $a0, -8($a3)
+lw $a1, -4($a3)
+jal concat
+move $t0, $a3
 j label0
 label2:
 li $v0, 4
-la $a0, str0
+move $a0, $t0
 syscall
 jal put_line
 j program_end

@@ -28,6 +28,7 @@ syscall
 jal put_line
 move $t1, $t0
 li $t2, 1
+sub $t0, $t1, $t2
 j label0
 label2:
 j program_end

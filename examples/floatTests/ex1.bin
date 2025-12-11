@@ -23,8 +23,8 @@ lwc1 $f2, flt0
 mov.s $f3, $f2
 li $t1, 4
 move $t2, $t1
-move $t4, $t0
-move $t5, $t2
+li $t4, 2
+li $t5, 0
 move $a0, $t4
 move $a1, $t5
 jal pow_int

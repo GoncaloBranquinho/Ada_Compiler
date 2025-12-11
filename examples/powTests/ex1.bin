@@ -18,6 +18,7 @@ flt2: .float 3.0
     main:
 move $fp, $sp
 lwc1 $f3, flt0
+mov.s $f2, $f3
 lwc1 $f5, flt1
 li $t3, 0
 mov.s $f12, $f5

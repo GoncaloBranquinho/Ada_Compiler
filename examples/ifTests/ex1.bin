@@ -18,6 +18,7 @@ str2: .asciiz "Reprovado"
     main:
 move $fp, $sp
 li $t1, 75
+move $t0, $t1
 j label0
 label0:
 li $v0, 4
