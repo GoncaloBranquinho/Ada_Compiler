@@ -1,16 +1,21 @@
 #!/bin/sh
 
-cd src
-make clean >/dev/null 2>&1
-make build
-cd ../scripts/
+if [ "$1" != "-e" ] || [ ! -f "src/bin/ada" ]; then
+    echo "Recompiling project..."
+    cd src
+    make clean >/dev/null 2>&1
+    make build
+    cd ../scripts/
+else
+    cd scripts
+fi
 
 tests=0
 successes=0
 fails=0
 
 for dir in ../examples/*/; do
-  
+
   rm -f "$dir"*.AST.txt "$dir"*.Table.txt "$dir"*.IR.txt "$dir"*.Addresses.txt "$dir"*.Mips.txt
 
   for filename in "$dir"*.adb; do

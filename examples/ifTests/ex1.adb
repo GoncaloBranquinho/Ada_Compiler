@@ -1,7 +1,7 @@
 procedure Main is
   score : Integer := 75;
 begin
-  if score >= 60 then
+  if true then
     Put_Line("Aprovado");
   else
     if score >= 50 then

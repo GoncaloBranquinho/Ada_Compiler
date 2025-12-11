@@ -13,6 +13,9 @@ import qualified Data.Map.Strict as Map
 import MemoryAllocator
 import CodeGen
 import Lexer (alexScanTokensInsensitive)
+import MemoryAllocator (removeUnusedTemps)
+import AnalyzeIR
+
 
 main :: IO ()
 main = do
@@ -33,9 +36,12 @@ runCompiler file = do input <- readFile file
                                 let scopesInfoList = Map.toList scopesInfo
                                 let finalScopeInfoList = removeUnusedTemps scopesInfoList []
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
+                                let (newScopesInfo,newStringsLits,newFloatLits, _) = evalState (analyzeInstr instr) (Map.empty, [], [], Map.empty)
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
+                                                               --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
+                                --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
                                 writeFile (file ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
                                 writeFile (file ++ "Addresses.txt") (show addresses)
                                 writeFile (file ++ "Mips.txt") (intercalate "\n" mipsCode)

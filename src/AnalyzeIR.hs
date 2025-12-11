@@ -58,8 +58,21 @@ analyzeInstr ((DECL t1 t):rest) = do if t == "Float" then addTable t1 4 True els
 analyzeInstr ((TOSTR t t1 t2):rest) = do addTable t1 4 False
                                          if t == "Float" && (head t2) /= '_' then addTable t2 4 True else addTable t2 4 False
                                          analyzeInstr rest
---analyzeInstr ((OP binOp t1 t2 t3))
-analyzeInstr (_:rest) = analyzeInstr rest 
+analyzeInstr ((OP binOp t1 t2 t3):rest) = do if convertedT == "Float" && (head t1) /= '_' then addTable t1 4 True else addTable t1 4 False
+                                             case binOp of
+                                                        POW "Float" -> do if (head t2) /= '_' then addTable t2 4 True else addTable t2 4 False
+                                                                          addTable t3 4 False
+                                                        _           -> do if convertedT == "Float" && (head t2) /= '_' then addTable t2 4 True else addTable t2 4 False
+                                                                          if convertedT == "Float" && (head t3) /= '_' then addTable t3 4 True else addTable t3 4 False
+
+                                             analyzeInstr rest
+            where convertedT = (\x -> val x) binOp
+analyzeInstr ((COND binOp t1 t2 _ _):rest) = do if convertedT == "Float" && (head t1) /= '_' then addTable t1 4 True else addTable t1 4 False
+                                                if convertedT == "Float" && (head t2) /= '_' then addTable t2 4 True else addTable t2 4 False
+                                                analyzeInstr rest
+           where convertedT = (\x -> val x) binOp
+
+analyzeInstr (_:rest) = analyzeInstr rest
 
 
 

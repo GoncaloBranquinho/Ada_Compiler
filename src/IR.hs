@@ -342,10 +342,10 @@ transExec (GetLine id1 id2) table = do scope <- getCurrScopeMips
 
 
 transExp :: Exp -> (SymTab, ScopeMem) -> Temp -> State Count [Instr]
-transExp TrueLit table dest = do newTyp "Integer"
+transExp TrueLit table dest = do newTyp "Boolean"
                                  addTable dest 4 False
                                  return [MOVEI dest (TInt 1)]
-transExp FalseLit table dest = do newTyp "Integer"
+transExp FalseLit table dest = do newTyp "Boolean"
                                   return [MOVEI dest (TInt 0)]
 transExp (IntLit num) table dest = do newTyp "Integer"
                                       return [MOVEI dest (TInt num)]

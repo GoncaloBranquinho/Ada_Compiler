@@ -10,52 +10,103 @@ float_one: .float 1.0
 float_ten: .float 10.0
 true_string: .asciiz "TRUE"
 false_string: .asciiz "FALSE"
-str0: .asciiz "ola"
+flt0: .float 3.35
+flt1: .float 3.0
+flt2: .float 6.3434
 
 .text
     main:
 move $fp, $sp
-li $t1, 3
+li $t1, 2
+move $t0, $t1
+lwc1 $f2, flt0
+mov.s $f3, $f2
+li $t1, 4
 move $t2, $t1
-li $a3, 0
-#fromList [(0,[EVAL "_t0@0",EVAL "_t1@0",MV "_t0@0" "z@0",MV "_t1@0" "z@0"])]EVAL "_t0@0"
-la $a2, str0
-jal concat
-move $t1, $a3
-li $a3, 0
-la $a2, str0
-jal concat
-move $t1, $a3
-li $a3, 0
-move $a2, $t1
-jal concat
-move $t1, $a2
-li $a3, 0
-la $a2, str0
-jal concat
-move $t3, $a3
-li $a3, 0
-move $a2, $t3
-jal concat
-move $t3, $a2
-label0:
-li $t1, 0
-move $t3, $t2
-bge $t1, $t3, label2
-label1:
-move $t1, $t2
-li $t3, 1
-sub $t2, $t1, $t3
-move $a2, $t3
-move $a3, $t1
-lw $a0, -8($a3)
-lw $a1, -4($a3)
-jal concat
-move $t0, $a3
-j label0
-label2:
+move $t4, $t0
+move $t5, $t2
+move $a0, $t4
+move $a1, $t5
+jal pow_int
+move $t3, $v0
+move $a0, $t3
+jal itos
+move $t1, $v0
 li $v0, 4
-move $a0, $t0
+move $a0, $t1
+syscall
+jal put_line
+mov.s $f5, $f3
+move $t5, $t0
+mov.s $f12, $f5
+move $a1, $t5
+jal pow_float
+mov.s $f4, $f0
+mov.s $f12, $f4
+jal ftos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
+syscall
+jal put_line
+mov.s $f5, $f3
+move $t5, $t2
+mov.s $f12, $f5
+move $a1, $t5
+jal pow_float
+mov.s $f4, $f0
+mov.s $f12, $f4
+jal ftos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
+syscall
+jal put_line
+lwc1 $f4, flt1
+mov.s $f12, $f4
+jal ftos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
+syscall
+jal put_line
+lwc1 $f5, flt1
+li $t5, 1
+mov.s $f12, $f5
+move $a1, $t5
+jal pow_float
+mov.s $f4, $f0
+mov.s $f12, $f4
+jal ftos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
+syscall
+jal put_line
+lwc1 $f5, flt2
+li $t5, 0
+mov.s $f12, $f5
+move $a1, $t5
+jal pow_float
+mov.s $f4, $f0
+mov.s $f12, $f4
+jal ftos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
+syscall
+jal put_line
+li $t4, 2
+li $t5, 0
+move $a0, $t4
+move $a1, $t5
+jal pow_int
+move $t3, $v0
+move $a0, $t3
+jal itos
+move $t1, $v0
+li $v0, 4
+move $a0, $t1
 syscall
 jal put_line
 j program_end
