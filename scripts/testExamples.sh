@@ -16,7 +16,7 @@ fails=0
 
 for dir in ../examples/*/; do
 
-  rm -f "$dir"*.AST.txt "$dir"*.Table.txt "$dir"*.IR.txt "$dir"*.Addresses.txt "$dir"*.Mips.txt
+  rm -f "$dir"*AST.txt "$dir"*Table.txt "$dir"*IR.txt "$dir"*Addresses.txt "$dir"*Mips.txt
 
   for filename in "$dir"*.adb; do
     [ -e "$filename" ] || continue 

@@ -15,6 +15,9 @@ import CodeGen
 import Lexer (alexScanTokensInsensitive)
 import MemoryAllocator (removeUnusedTemps)
 import AnalyzeIR
+import LivenessAnalysis
+import System.FilePath (dropExtension)
+
 
 
 main :: IO ()
@@ -26,31 +29,49 @@ main = do
 
 runCompiler :: FilePath -> IO ()
 runCompiler file = do input <- readFile file
+                      let baseName = dropExtension file 
                       let ast = parse $ alexScanTokensInsensitive input
                       let (symtab,(errors,scopemem)) = evalState (buildSTProg ast) emptyST
-                      writeFile (file ++ "AST.txt") (show ast)
-                      writeFile (file ++ "Table.txt") (show (symtab,(errors,scopemem)))
+                      writeFile (baseName ++ "AST.txt") (show ast)
+                      writeFile (baseName ++ "Table.txt") (show (symtab,(errors,scopemem)))
                       if errors /= []
                         then exitWith (ExitFailure 1)
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
+                                let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA >>= \t1 -> deadCodeElim 1 instr >>= \t2 -> return t2) emptyLA
+                                let (newScopesInfo,newStringsLits,newFloatLits, whileInfo) = evalState (analyzeInstr (sxt livenessAnalysisResult)) (Map.empty, [], [], Map.empty)
                                 let scopesInfoList = Map.toList scopesInfo
-                                let finalScopeInfoList = removeUnusedTemps scopesInfoList []
+                                let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder newStringsLits newFloatLits) emptyMem
+                                let mipsCode = evalState (transMips (sxt livenessAnalysisResult) newStringsLits newFloatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
+                                --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
+                                --let k = show $ sxt' $ snd $ mipsCode
+                                --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
+                                --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
+                                writeFile (baseName ++ "IR.txt") (unlines $ map show (instr))
+                                writeFile (baseName ++ "IRNew.txt")  (show (livenessAnalysisResult))
+                                writeFile (baseName ++ "Addresses.txt") (show addresses)
+                                writeFile (baseName ++ ".bin") (intercalate "\n" mipsCode)
+                                --writeFile (file ++ "Mips.txt") (k)
+                                exitWith ExitSuccess
+                                
+                               
+                                {-let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
-                                let (newScopesInfo,newStringsLits,newFloatLits, _) = evalState (analyzeInstr instr) (Map.empty, [], [], Map.empty)
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
-                                                               --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
-                                --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
-                                writeFile (file ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
-                                writeFile (file ++ "Addresses.txt") (show addresses)
-                                writeFile (file ++ "Mips.txt") (intercalate "\n" mipsCode)
+                                writeFile (baseName ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
+                                writeFile (baseName ++ "Addresses.txt") (show addresses)
+                                writeFile (baseName ++ ".bin") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ "Mips.txt") (k)
+                                putStrLn (intercalate "\n" mipsCode)
                                 exitWith ExitSuccess
+                                -}
 
+sxt' :: (a, b, c, d, e, f, g, h, i) -> f
+sxt' (_, _, _, _, _, x, _, _, _) = x
 
-sxt :: (a, b, c, d, e, f, g, h, i) -> f
-sxt (_, _, _, _, _, x, _, _, _) = x
+sxt :: (a, b, c, d, e, f, g, h) -> h
+sxt (_, _, _, _, _, _, _, x) = x
 
 
 
