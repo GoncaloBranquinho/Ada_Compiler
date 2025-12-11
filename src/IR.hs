@@ -36,9 +36,11 @@ data Literal = TInt Int | TDouble Float | TString String
 
 
 type Temp = String
+data WhileInfo = MV Temp Temp | EVAL Temp
+   deriving (Eq,Show)
 type Label = String
 type Table = Map.Map Int [(String,Int,Bool)]
-type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int], Int, Int, Map.Map Int [Temp])
+type Count = (Int,Int,Int,String,([String],[Float]), Table, Int, Int, [Int], Int, Int, Map.Map Int [WhileInfo])
 
 emptyIR :: Count
 emptyIR = (0,0,0,"",([],[]),Map.empty,0,1,[],-1,0, Map.empty)
@@ -121,7 +123,7 @@ getCurrWhile :: State Count Int
 getCurrWhile = do (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
                   return currWhile
 
-addWhile :: Temp -> State Count ()
+addWhile :: WhileInfo -> State Count ()
 addWhile id = do (temps,labels,scope,typ,(setString,setFloat), table,currScopeMips,nextScopeMips, finishOrder,currWhile,nextWhile,whileMap) <- get
                  let whileInfo = Map.findWithDefault [] currWhile whileMap
                  let whileInfo' = whileInfo ++ (if (elem id whileInfo) then [] else [id])
@@ -188,7 +190,7 @@ searchID id1 ((temp,(typ,_)):rest) = do let id2 = takeWhile (\x -> x /= '@') tem
                                           else 
                                               searchID id1 rest
 
-transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int],[String],[Float],Map.Map Int [Temp])
+transAST :: Prog -> (SymTab, ScopeMem) -> State Count ([Instr],Table,[Int],[String],[Float],Map.Map Int [WhileInfo])
 transAST (Prog decl exec) table = do code1 <- transDecl decl table
                                      code2 <- transExec exec table
                                      addFinishOrder 0
@@ -334,7 +336,7 @@ transExec (GetLine id1 id2) table = do scope <- getCurrScopeMips
                                        (newDest2,_) <- getVarScope id2 (show scope) table
                                        (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
                                        when (currWhile >= 0) $ do
-                                         addWhile newDest1
+                                         addWhile (EVAL newDest1)
                                        return [READ newDest1 newDest2]
 
 
@@ -354,15 +356,15 @@ transExp (StringLit num) table dest = do newTyp "String"
                                          addSet num
                                          (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
                                          when (currWhile >= 0) $ do
-                                           addWhile dest
+                                           addWhile (MV dest num)
                                          return [MOVEI dest (TString num)]
 transExp (Var id) table dest = do scope <- getCurrScopeMips
                                   (newTemp,typ) <- getVarScope id (show scope) table
                                   newTyp typ
                                   addTable dest 4 False
                                   (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
-                                  when (currWhile >= 0) $ do
-                                    addWhile dest
+                                  when (currWhile >= 0 && typ == "String") $ do
+                                    addWhile (MV dest newTemp)
                                   return ([MOVE typ dest newTemp])
 transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp
@@ -417,8 +419,8 @@ transExp (Concat exp1 exp2) table dest = do t1 <- newTemp
                                             addTable t2 4 False
                                             (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
                                             when (currWhile >= 0) $ do
-                                              addWhile t1
-                                              addWhile t2
+                                              addWhile (EVAL t1)
+                                              addWhile (EVAL t2)
                                             code1 <- transExp exp1 table t1
                                             code2 <- transExp exp2 table t2
                                             popTemp 2

@@ -10,7 +10,7 @@ import Debug.Trace
 
 
 type Offset = Int
-type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int, Int, Map.Map Int [String])
+type Counter = (Int, [String], Addresses, ScpInfo, [Int], Content, Int, Int, Map.Map Int [WhileInfo])
 type Addresses = Map.Map String [Location]
 data ValueInfo = Lit String | Var String
   deriving (Show,Eq)
@@ -341,9 +341,34 @@ transIR (END:remainder) = do code1 <- free
 transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
                                put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter+1,whileInfo)
                                let currWhile = Map.findWithDefault [] loopCounter whileInfo
-                               code1 <- (mapM (\x -> getContent x  >>= \t1 -> concatMultiple t1 >>= \t2 -> return (["li $a3, 0"] ++ t2)) currWhile) >>= \t5 -> return (concat t5)
-                               code2 <- transIR remainder
-                               return (code1 ++ code2)
+                               code1 <- mapM (\k -> case k of 
+                                                           EVAL x -> do t1 <- getContent x
+                                                                        if (t1 /= []) 
+                                                                        then do code2  <- concatMultiple t1
+                                                                                t1'    <- getLocation x "String"
+                                                                                t1''   <- getAddress t1'  
+                                                                                changeContent x [Var x]
+                                                                                let code3 = case t1' of 
+                                                                                                     Stack t1''' -> ["sw $a3, " ++ t1'' ++ "($fp)"]
+                                                                                                     RegI t1'''  -> ["move " ++ t1'' ++ ", $a3"]
+                                                                                return (["li $a3, 0"] ++ [show whileInfo ++ show k] ++ code2 ++ code3)
+                                                                        else return []
+                                                           MV x y -> do y1 <- getContent y
+                                                                        if (y1 /= []) 
+                                                                        then do code2 <- concatMultiple y1
+                                                                                x1'   <- getLocation x "String"
+                                                                                x1''  <- getAddress x1'
+                                                                                changeContent x [Var x]
+                                                                                let code3 = case (x1') of 
+                                                                                                       Stack x1''' -> ["sw $a3, " ++ x1'' ++ "($fp)"] ++ ["li $a3, 0"] ++ ["lw $a2, " ++ x1'' ++ "($fp)"] ++ ["jal concat"] ++ ["sw $a3, " ++ x1'' ++ "($fp)"]
+                                                                                                       RegI x1'''  -> ["move " ++ x1'' ++ ", $a3"] ++ ["li $a3, 0"] ++ ["move $a2, " ++ x1''] ++ ["jal concat"] ++ ["move " ++ x1'' ++ ", $a2"]
+                                                                                return (["li $a3, 0"] ++ code2 ++ code3)
+                                                                        else return []
+                                             ) currWhile
+                                        >>= \x1 -> return (concat x1)
+                                         
+                               code4 <- transIR remainder
+                               return (code1 ++ code4)
 transIR (ENDWHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
                                   put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter-1,whileInfo)
                                   transIR remainder
@@ -397,7 +422,7 @@ concatMultiple :: [ValueInfo] -> State Counter [String]
 concatMultiple [] = return []
 concatMultiple ((Lit t1):xs) = do t1' <- getLocation t1 "String"
                                   t1'' <- getAddress t1'
-                                  instrNext <- concatMultiple xs
+                                  instrNext <- concatMultiple xs -- guardar $a3 no t1
                                   return (["la $a2, " ++ t1''] ++ ["jal concat"] ++ instrNext)
 concatMultiple ((Var t1):xs) = do t1' <- getLocation t1 "String"
                                   t1'' <- getAddress t1'

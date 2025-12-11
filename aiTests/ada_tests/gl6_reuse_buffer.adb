@@ -1,0 +1,9 @@
+procedure Main is
+  str : String := "          ";
+  num : Integer := 0;
+begin
+  Get_Line (str, num);
+  Put_Line (str);
+  Get_Line (str, num);
+  Put_Line (str);
+end Main;
