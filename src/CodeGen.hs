@@ -40,7 +40,7 @@ transMips :: [Instr] -> [String] -> [Float] -> State Counter [String]
 transMips instr strLit fltLit = do fillData strLit fltLit
                                    code2 <- transIR instr
                                    (_, dataList, _, _, _,_,_,_,_) <- get
-                                   return ([".data"] ++ strBuf ++ strBufSize ++ stoiOvrFlwMsg ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen  ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ dynamicStrCompareEq ++ staticStrCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ strToInteger ++ boolToStringFun ++ powIntFun ++ powFloatFun ++ stoiOverflow ++ powOverflow ++ programEnd)
+                                   return ([".data"] ++ strBuf ++ strBufSize ++ stoiOvrFlwMsg ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen  ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ dynamicStrCompareEq ++ staticStrCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ strToIntegerFun ++ boolToStringFun ++ powIntFun ++ powFloatFun ++ stoiOverflow ++ powOverflow ++ programEnd)
     where strBuf              = ["string_buffer: .space 1024"]
           strBufSize          = ["string_buffer_size: .half 1024"]
           stoiOvrFlwMsg       = ["stoi_overflow_str: .asciiz \"Erro: overflow na funcao stoi (conversao de string para int)!\\n\"\n"]
