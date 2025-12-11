@@ -5,3 +5,5 @@ Lexer.hs
 parser
 Parser.hs
 *.txt
+*.jar
+scripts/scripts/

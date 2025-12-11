@@ -209,6 +209,7 @@ transDecl (DeclInit ids typ exp) table = do idsList <- transDeclVar ids table
                                             code1 <- transExp exp table t1
                                             let typString = typeToString typ
                                             let newTyp = typeToString typ
+                                            (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
                                             let decls = map (\v -> DECL v typString) idsList
                                             let moves = map (\v -> MOVE newTyp v t1) idsList
                                             popTemp 1
@@ -285,6 +286,7 @@ transCond (XOr cond1 cond2) table labelt labelf = do code1 <- transCond (Or (And
 transCond (Var id) table labelt labelf = do t1 <- newTemp
                                             t2 <- newTemp
                                             addTable t1 4 False
+                                            addTable t2 4 False
                                             code1 <- transExp (Var id) table t1
                                             popTemp 2
                                             return (code1 ++ [MOVEI t2 (TInt 0)] ++ [COND (NE "Integer") t1 t2 labelt labelf])
@@ -330,6 +332,9 @@ transExec (PutLine exp) table = do t1 <- newTemp
 transExec (GetLine id1 id2) table = do scope <- getCurrScopeMips
                                        (newDest1,_) <- getVarScope id1 (show scope) table
                                        (newDest2,_) <- getVarScope id2 (show scope) table
+                                       (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
+                                       when (currWhile >= 0) $ do
+                                         addWhile newDest1
                                        return [READ newDest1 newDest2]
 
 
@@ -347,11 +352,17 @@ transExp (FloatLit num) table dest = do newTyp "Float"
                                         return [MOVEI dest (TDouble num)]
 transExp (StringLit num) table dest = do newTyp "String"
                                          addSet num
+                                         (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
+                                         when (currWhile >= 0) $ do
+                                           addWhile dest
                                          return [MOVEI dest (TString num)]
 transExp (Var id) table dest = do scope <- getCurrScopeMips
                                   (newTemp,typ) <- getVarScope id (show scope) table
                                   newTyp typ
                                   addTable dest 4 False
+                                  (_,_,_,_,_,_,_,_,_,currWhile,_,_) <- get
+                                  when (currWhile >= 0) $ do
+                                    addWhile dest
                                   return ([MOVE typ dest newTemp])
 transExp (Add exp1 exp2) table dest = do t1 <- newTemp
                                          t2 <- newTemp

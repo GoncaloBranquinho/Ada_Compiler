@@ -6,6 +6,7 @@ import qualified Data.Map.Strict as Map
 import Control.Monad.RWS (MonadState(get))
 import GHC.Exts.Heap (GenClosure(value))
 import MemoryAllocator
+import Debug.Trace
 
 
 type Offset = Int
@@ -185,9 +186,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t2''' <- getContent t2
                                            t3''' <- getContent t3
                                            loopCounter <- getLoopState
-                                           if loopCounter == 0 then (changeContent t1 (t2''' ++ t3''')) else (changeContent t1 [Var t1])
-                                           concatM2 <- case opT of CONCAT _ -> if (loopCounter /= 0) then concatMultiple t2''' else return []; _ -> return [];
-                                           concatM3 <- case opT of CONCAT _ -> if (loopCounter /= 0) then concatMultiple t3''' else return []; _ -> return [];
+                                           case opT of CONCAT _ -> (if loopCounter == 0 then (changeContent t1 (t2''' ++ t3''')) else (changeContent t1 [Var t1])); _ -> return ()
                                            let instrExecute = case opT of
                                                                        ADD _  -> case (convertedT, t1', t2', t3') of
                                                                                                                   ("Float", Stack _, Stack _, Stack _)     -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["l.s $f13, " ++ t3'' ++ "($fp)"] ++ ["add.s " ++ "$f14" ++ ", " ++ "$f12" ++ ", " ++ "$f13"] ++ ["s.s $f14, " ++ t1'' ++ "($fp)"]
@@ -342,7 +341,7 @@ transIR (END:remainder) = do code1 <- free
 transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get
                                put (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter+1,whileInfo)
                                let currWhile = Map.findWithDefault [] loopCounter whileInfo
-                               code1 <- (mapM (\x -> get >>= \t0 -> getLocation x "String" >>= \t1 -> getAddress t1 >>= \t2 -> getContent t2 >>= \t3 -> concatMultiple t3 >>= \t4 -> return (["li $a3, 0"] ++ t4)) currWhile) >>= \t5 -> return (concat t5)
+                               code1 <- (mapM (\x -> getContent x  >>= \t1 -> concatMultiple t1 >>= \t2 -> return (["li $a3, 0"] ++ t2)) currWhile) >>= \t5 -> return (concat t5)
                                code2 <- transIR remainder
                                return (code1 ++ code2)
 transIR (ENDWHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopCounter,whileInfo) <- get

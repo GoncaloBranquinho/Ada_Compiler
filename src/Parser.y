@@ -98,8 +98,14 @@ Assign : id ":=" Exp { Assign $1 $3 }
 
 WhileLoop : while Exp loop ExecCompStart end loop { WhileLoop $2 $4 }
 
-IO : put_line "(" Exp ")"        { PutLine $3 }
-   | get_line "(" id "," id ")"  { GetLine $3 $5 }
+IO : id "(" Exp ")"        { if $1 == "put_line"
+                                then PutLine $3
+                                else error ("Unknown exec function: " ++ $1)
+                           }
+   | id "(" id "," id ")"  { if $1 == "get_line"
+                                then GetLine $3 $5
+                                else error ("Unknown exec function: " ++ $1)
+                          } 
 
 DeclBlock : declare DeclCompStart begin ExecCompStart end { DeclBlock $2 $4 }
 
@@ -144,7 +150,10 @@ Factor     : integer_lit               { IntLit $1 }
            | true                      { TrueLit }
            | false                     { FalseLit }
            | "(" Exp ")"               { $2 }
-           | to_str "(" Exp ")"        { ToStr $3 }
+           | id "(" Exp ")"            { if $1 == "str"
+                                         then ToStr $3
+                                         else error ("Unknown function: " ++ $1)
+                                       }
 
 {
 

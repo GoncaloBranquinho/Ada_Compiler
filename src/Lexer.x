@@ -13,9 +13,9 @@ tokens :-
 
 $white+                                    ;
 main                                       { \s -> MAIN }
-put_line                                   { \s -> PUTL }
-get_line                                   { \s -> GETL }
-str                                        { \s -> TOSTR }
+--put_line                                   { \s -> PUTL }
+--get_line                                   { \s -> GETL }
+-- str                                     { \s -> TOSTR }
 integer                                    { \s -> INT }
 boolean                                    { \s -> BOOL }
 float                                      { \s -> FLOAT }
