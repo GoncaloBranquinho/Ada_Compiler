@@ -138,3 +138,13 @@ updateIdx :: Int -> Int -> (Int, Int, Int) -> (Int, Int, Int)
 updateIdx 1 bytes (x, y, z) = (x+bytes, y, z)
 updateIdx 2 bytes (x, y, z) = (x, y+bytes, z)
 updateIdx 3 bytes (x, y, z) = (x, y, z+bytes)
+
+
+
+removeUnusedTemps :: TableIR -> [String] -> TableIR
+removeUnusedTemps [] _ = []
+removeUnusedTemps ((scope,info):xs) ys = (scope,removeUnusedTempsScope info ys):removeUnusedTemps xs ys
+
+removeUnusedTempsScope :: [(String,Int,Bool)] -> [String] -> [(String,Int,Bool)]
+removeUnusedTempsScope [] _ = []
+removeUnusedTempsScope ((x,y,z):xs) ys = if elem x ys then (x,y,z):removeUnusedTempsScope xs ys else removeUnusedTempsScope xs ys

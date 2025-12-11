@@ -7,7 +7,7 @@ import Data.List
 import Control.Monad.State
 import SymbolTable
 import PrintAST (printAST)
-import IR 
+import IR
 import System.Exit (exitWith, ExitCode(..))
 import qualified Data.Map.Strict as Map
 import MemoryAllocator
@@ -31,11 +31,12 @@ runCompiler file = do input <- readFile file
                         then exitWith (ExitFailure 1)
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
                                 let scopesInfoList = Map.toList scopesInfo
+                                let finalScopeInfoList = removeUnusedTemps scopesInfoList []
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
-                                writeFile (file ++ "IR.txt")  ((unlines $ map show instr) ++ show whileInfo)
+                                writeFile (file ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
                                 writeFile (file ++ "Addresses.txt") (show addresses)
                                 writeFile (file ++ "Mips.txt") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ "Mips.txt") (k)

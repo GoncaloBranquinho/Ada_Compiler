@@ -411,6 +411,7 @@ transExp (Pow exp1 exp2) table dest = do t1 <- newTemp
                                          code2 <- transExp exp2 table t2
                                          typ2 <- getVarTyp
                                          let typ3 = if (typ1 == "Float" || typ2 == "Float") then "Float" else "Integer"
+                                         newTyp typ3
                                          popTemp 2
                                          return (code1 ++ code2 ++ [OP (IR.POW typ3) dest t1 t2])
 transExp (Concat exp1 exp2) table dest = do t1 <- newTemp

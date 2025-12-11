@@ -81,7 +81,6 @@ getLocation :: String -> String -> State Counter Location
 getLocation str t = do (_, _,table,_,_,_,_,_,_) <- get
                        let Just value = Map.lookup str table
                        if ((length value) == 1 || t /= "Float") then return (head value) else return (last value)
-    where t' = (\x -> if (t == "Floatt") then ("Float") else t) t
 
 getAddress :: Location -> State Counter String
 getAddress loc = case loc of
@@ -114,7 +113,6 @@ alloc = do (dataCounter, dataList, table, scpInfo, order, content, currScp,loopC
            let (x,y,z) = Map.findWithDefault (0,0,0) currScp scpInfo
            put (dataCounter,dataList,table,scpInfo,order,content,currScp+1,loopCounter,whileInfo)
            return (if z == 0 then [] else ["addiu $sp, $sp, " ++ show (-z)])
-
 
 transIR :: [Instr] -> State Counter [String]
 transIR [] = return []
@@ -180,7 +178,7 @@ transIR ((JUMP l):remainder) = do code1 <- transIR remainder
                                   return (["j " ++ l] ++ code1)
 transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                            t2' <- getLocation t2 convertedT
-                                           t3' <- case opT of POW _ -> do getLocation t3 (convertedT ++ (if (convertedT == "Float") then "t" else ""))
+                                           t3' <- case opT of POW _ -> do getLocation t3 ((if (convertedT == "Float") then "Integer" else convertedT))
                                                               _     -> do getLocation t3 convertedT
                                            t1'' <- getAddress t1'
                                            t2'' <- getAddress t2'
@@ -275,7 +273,7 @@ transIR ((OP opT t1 t2 t3):remainder) = do t1' <- getLocation t1 convertedT
                                                                                                                   ("Integer", RegI _, Stack _, RegI _)     -> ["move $a0, " ++ t2''] ++ ["lw $a1, " ++ t3'' ++ "($fp)"] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                                                   ("Integer", RegI _, RegI _, Stack _)     -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
                                                                                                                   ("Integer", RegI _, RegI _, RegI _)      -> ["move $a0, " ++ t2''] ++ ["move $a1, " ++ t3''] ++ ["jal pow_int"] ++ ["move " ++ t1'' ++ ", $v0"]
--- t2 -> $a3, t3 -> $a2, $a3 -> t1, -8($a3) -> $a0, -4($a3) -> $a1
+
                                                                        CONCAT _ -> if loopCounter == 0
                                                                                    then []
                                                                                    else case (t1', t2', t3') of
@@ -353,7 +351,7 @@ transIR (WHILE:remainder) = do (dataCounter, dataList, table, scpInfo, order, co
                                                                                 let code3 = case t1' of 
                                                                                                      Stack t1''' -> ["sw $a3, " ++ t1'' ++ "($fp)"]
                                                                                                      RegI t1'''  -> ["move " ++ t1'' ++ ", $a3"]
-                                                                                return (["li $a3, 0"] ++ [show whileInfo ++ show k] ++ code2 ++ code3)
+                                                                                return (["li $a3, 0"] ++ code2 ++ code3)
                                                                         else return []
                                                            MV x y -> do y1 <- getContent y
                                                                         if (y1 /= []) 
