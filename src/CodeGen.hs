@@ -43,7 +43,7 @@ transMips instr strLit fltLit = do fillData strLit fltLit
                                    return ([".data"] ++ strBuf ++ strBufSize ++ stoiOvrFlwMsg ++ powOvrFlwMsg ++ powNegExpMsg ++ floatZero ++ floatOne ++ floatTen  ++ trueString ++ falseString ++ dataList ++ ["\n.text", "    main:"] ++ ["move $fp, $sp"] ++ code2 ++ ["j program_end\n"] ++ concatFun ++ dynamicStrCompareEq ++ staticStrCompareEq ++ readFun ++ putLineFun ++ intToStringFun ++ fltToStringFun ++ strToInteger ++ boolToStringFun ++ powIntFun ++ powFloatFun ++ stoiOverflow ++ powOverflow ++ programEnd)
     where strBuf              = ["string_buffer: .space 1024"]
           strBufSize          = ["string_buffer_size: .half 1024"]
-          stoiOvrFlwMsg       = ["stoi_overflow_str: .asciiz "Erro: overflow na funcao stoi (conversao de string para int)!\n"\n"]
+          stoiOvrFlwMsg       = ["stoi_overflow_str: .asciiz \"Erro: overflow na funcao stoi (conversao de string para int)!\\n\"\n"]
           powOvrFlwMsg        = ["pow_overflow_str: .asciiz \"Erro: overflow na funcao exponencial!\\n\""]
           powNegExpMsg        = ["pow_negative_exp_str: .asciiz \"Erro: expoente negativo na funcao exponencial!\\n\""]
           floatZero           = ["float_zero: .float 0.0"]
