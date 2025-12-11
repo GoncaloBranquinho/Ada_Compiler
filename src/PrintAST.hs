@@ -57,5 +57,5 @@ prettyExpr n expr = case expr of
   Le  e1 e2  -> indent n ++ "Le\n"   ++ prettyExpr (n+1) e1 ++ prettyExpr (n+1) e2
   Not e      -> indent n ++ "Not\n"  ++ prettyExpr (n+1) e
   Concat e1 e2 -> indent n ++ "Concat\n" ++ prettyExpr (n+1) e1 ++ prettyExpr (n+1) e2
-  ToStr e -> indent n ++ "ToStr\n" ++ prettyExpr (n+1)
+  ToStr e -> indent n ++ "ToStr\n" ++ prettyExpr (n+1) e
 
