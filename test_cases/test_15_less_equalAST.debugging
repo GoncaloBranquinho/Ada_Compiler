@@ -1,0 +1,1 @@
+Prog (DeclComp (DeclComp (DeclInit (DeclVarLast "x") TypeInteger (IntLit 10)) (DeclInit (DeclVarLast "y") TypeInteger (IntLit 10))) (DeclNonInit (DeclVarLast "resultado") TypeBoolean)) (ExecComp (Assign "resultado" (Le (Var "x") (Var "y"))) (IfThenElse (Var "resultado") (PutLine (StringLit "Menor ou igual")) (PutLine (StringLit "Maior"))))

@@ -1,0 +1,1 @@
+Prog (DeclComp (DeclInit (DeclVarLast "i") TypeInteger (IntLit 1)) (DeclInit (DeclVarLast "soma") TypeInteger (IntLit 0))) (ExecComp (WhileLoop (Le (Var "i") (IntLit 5)) (ExecComp (Assign "soma" (Add (Var "soma") (Var "i"))) (Assign "i" (Add (Var "i") (IntLit 1))))) (PutLine (ToStr (Var "soma"))))

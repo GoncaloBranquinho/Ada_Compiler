@@ -223,7 +223,7 @@ fi
 # ============================================================================
 
 echo -e "\n${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║         Resumo dos Testes             ║${NC}"
+echo -e "${BLUE}║         Resumo dos Testes              ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════╝${NC}\n"
 
 echo -e "${CYAN}Total de Testes:${NC} $TOTAL_TESTS"
@@ -232,12 +232,12 @@ echo -e "${RED}Testes Falharam:${NC} $FAILED_TESTS"
 
 if [ $FAILED_TESTS -eq 0 ]; then
     echo -e "\n${GREEN}╔════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║    🎉 TODOS OS TESTES PASSARAM! 🎉    ║${NC}"
+    echo -e "${GREEN}║    🎉 TODOS OS TESTES PASSARAM! 🎉     ║${NC}"
     echo -e "${GREEN}╚════════════════════════════════════════╝${NC}\n"
     exit 0
 else
     echo -e "\n${RED}╔════════════════════════════════════════╗${NC}"
-    echo -e "${RED}║     ❌ Alguns testes falharam ❌      ║${NC}"
+    echo -e "${RED}║     ❌ Alguns testes falharam ❌       ║${NC}"
     echo -e "${RED}╚════════════════════════════════════════╝${NC}\n"
     echo -e "${RED}Testes que falharam:${NC}"
     for test in "${FAILED_TEST_NAMES[@]}"; do

@@ -1,0 +1,27 @@
+BEGIN
+DECL "i@0" "Integer"
+MOVEI "_t0@0" (TInt 1)
+MOVE "Integer" "i@0" "_t0@0"
+DECL "soma@0" "Integer"
+MOVEI "_t0@0" (TInt 0)
+MOVE "Integer" "soma@0" "_t0@0"
+WHILE
+LABEL "label0"
+MOVE "Integer" "_t0@0" "i@0"
+MOVEI "_t1@0" (TInt 5)
+COND (LE {val = "Integer"}) "_t0@0" "_t1@0" "label1" "label2"
+LABEL "label1"
+MOVE "Integer" "_t0@0" "soma@0"
+MOVE "Integer" "_t1@0" "i@0"
+OP (ADD {val = "Integer"}) "soma@0" "_t0@0" "_t1@0"
+MOVE "Integer" "_t0@0" "i@0"
+MOVEI "_t1@0" (TInt 1)
+OP (ADD {val = "Integer"}) "i@0" "_t0@0" "_t1@0"
+JUMP "label0"
+LABEL "label2"
+ENDWHILE
+MOVE "Integer" "_t1@0" "soma@0"
+TOSTR "Integer" "_t0@0" "_t1@0"
+PRINT "_t0@0"
+END
+[(0,[("i@0",4,False),("_t0@0",4,False),("soma@0",4,False),("_t1@0",4,False)])]

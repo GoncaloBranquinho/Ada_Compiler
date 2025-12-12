@@ -1,0 +1,1 @@
+fromList [("_t0@0",[RegI "$t1",RegF "$f2"]),("_t1@0",[RegI "$t3",RegF "$f3"]),("i@0",[RegI "$t0"]),("soma@0",[RegI "$t2"])]
