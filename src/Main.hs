@@ -47,7 +47,7 @@ runCompiler file = do input <- readFile file
                                 --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
                                 --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
                                 writeFile (baseName ++ "IR.debugging") (unlines $ map show (instr))
-                                writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))) ++ (show livenessAnalysisResult))
+                                writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))))
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)
