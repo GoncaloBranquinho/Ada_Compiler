@@ -6,4 +6,3 @@ parser
 Parser.hs
 *.txt
 *.jar
-test_cases/
