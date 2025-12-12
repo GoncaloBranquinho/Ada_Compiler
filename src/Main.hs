@@ -29,7 +29,7 @@ main = do
 
 runCompiler :: FilePath -> IO ()
 runCompiler file = do input <- readFile file
-                      let baseName = dropExtension file 
+                      let baseName = dropExtension file
                       let ast = parse $ alexScanTokensInsensitive input
                       let (symtab,(errors,scopemem)) = evalState (buildSTProg ast) emptyST
                       writeFile (baseName ++ "AST.txt") (show ast)
@@ -49,23 +49,21 @@ runCompiler file = do input <- readFile file
                                 writeFile (baseName ++ "IR.txt") (unlines $ map show (instr))
                                 writeFile (baseName ++ "IRNew.txt")  (show (livenessAnalysisResult))
                                 writeFile (baseName ++ "Addresses.txt") (show addresses)
-                                writeFile (baseName ++ ".bin") (intercalate "\n" mipsCode)
+                                writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ "Mips.txt") (k)
                                 exitWith ExitSuccess
                                 -}
-                               
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
-                                writeFile (baseName ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
-                                writeFile (baseName ++ "Addresses.txt") (show addresses)
-                                writeFile (baseName ++ ".bin") (intercalate "\n" mipsCode)
-                                --writeFile (file ++ "Mips.txt") (k)
+                                --writeFile (baseName ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
+                                --writeFile (baseName ++ "Addresses.txt") (show addresses)
+                                writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
+                                --writeFile (file ++ ".mips") (k)
                                 --putStrLn (intercalate "\n" mipsCode)
                                 exitWith ExitSuccess
-                                
 
 sxt' :: (a, b, c, d, e, f, g, h, i) -> f
 sxt' (_, _, _, _, _, x, _, _, _) = x

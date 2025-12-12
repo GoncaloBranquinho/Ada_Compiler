@@ -2,8 +2,10 @@
 
 # Script de testes com validação de resultados
 # Compila exemplos Ada e compara com outputs esperados
-
-set -e
+# Uso: ./testValidation.sh [opções]
+#   ./testValidation.sh              # Recompila tudo e executa testes
+#   ./testValidation.sh --no-rebuild # Apenas executa testes
+#   ./testValidation.sh --clean      # Apaga arquivos de teste
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -23,84 +25,131 @@ mkdir -p "$TEST_DIR"
 TOTAL_TESTS=0
 PASSED_TESTS=0
 FAILED_TESTS=0
+declare -a FAILED_TEST_NAMES
 
 # ============================================================================
-# Função para registar um teste
+# Processar argumentos
 # ============================================================================
-register_test() {
-    local name=$1
-    local ada_code=$2
-    local expected_output=$3
-    local ada_file="$TEST_DIR/${name}.ada"
-    echo "$ada_code" > "$ada_file"
-    echo "$expected_output" > "$TEST_DIR/${name}.expected"
+REBUILD=true
+CLEAN_ONLY=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --no-rebuild)
+            REBUILD=false
+            ;;
+        --clean)
+            CLEAN_ONLY=true
+            ;;
+        -h|--help)
+            echo "Uso: ./testValidation.sh [opções]"
+            echo ""
+            echo "Opções:"
+            echo "  (sem argumentos)  Recompila tudo e executa testes"
+            echo "  --no-rebuild      Apenas executa testes (sem recompilar)"
+            echo "  --clean           Apaga todos os ficheiros de teste"
+            echo "  -h, --help        Mostra esta ajuda"
+            exit 0
+            ;;
+        *)
+            echo "Argumento desconhecido: $arg"
+            echo "Use ./testValidation.sh --help para ver as opções"
+            exit 1
+            ;;
+    esac
+done
+
+# ============================================================================
+# Função para limpar arquivos de teste
+# ============================================================================
+clean_tests() {
+   echo -e "${YELLOW}Limpando ficheiros de teste (exceto .adb e .expected)...${NC}"
+    if [ -d "$TEST_DIR" ]; then
+        rm -f "$TEST_DIR"/*.bin
+        rm -f "$TEST_DIR"/*.mips
+        rm -f "$TEST_DIR"/*.output
+        echo -e "${GREEN}✓ Ficheiros temporários apagados${NC}"
+    else
+        echo -e "${YELLOW}Nenhum ficheiro de teste para apagar${NC}"
+    fi
+    exit 0
 }
 
 # ============================================================================
 # Função para executar um teste
 # ============================================================================
+# Função para executar um teste (versão modificada)
 run_test() {
-   local name=$1
-    local ada_file="$TEST_DIR/${name}.ada"
+    local name=$1
+    local ada_file="$TEST_DIR/${name}.adb"
     local mips_file="$TEST_DIR/${name}.mips"
-    local bin_file="$TEST_DIR/${name}.bin"
     local expected_file="$TEST_DIR/${name}.expected"
     local output_file="$TEST_DIR/${name}.output"
+    local error_msg=""
 
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     # Compila para MIPS
     if ! "$EXEC" "$ada_file" > /dev/null 2>&1; then
-        echo -e "${RED}✗ $name${NC}"
+        error_msg="COMPILAÇÃO FALHOU"
+        echo -e "${RED}✗ $name ($error_msg)${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$name")
+        FAILED_TEST_NAMES+=("$name ($error_msg)")
         return 1
     fi
 
-    # Verifica se o ficheiro .bin foi criado
-    if [ ! -f "$bin_file" ] || [ ! -s "$bin_file" ]; then
-        echo -e "${RED}✗ $name${NC}"
+    # Verifica se o ficheiro .mips foi criado
+    if [ ! -f "$mips_file" ] || [ ! -s "$mips_file" ]; then
+        error_msg="NENHUM MIPS GERADO"
+        echo -e "${RED}✗ $name ($error_msg)${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$name")
+        FAILED_TEST_NAMES+=("$name ($error_msg)")
         return 1
     fi
 
-    # Copia o ficheiro .bin para .mips
-    cp "$bin_file" "$mips_file" 2>/dev/null
-
-    if [ ! -f "$mips_file" ]; then
-        echo -e "${RED}✗ $name${NC}"
+    # Verifica MARS
+    if ! command -v mars &> /dev/null && [ ! -f "Mars4_5.jar" ]; then
+        error_msg="MARS NÃO ENCONTRADO"
+        echo -e "${RED}✗ $name ($error_msg)${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$name")
+        FAILED_TEST_NAMES+=("$name ($error_msg)")
         return 1
     fi
 
-    # Executa no MARS
+    # Executa no MARS e captura erros
     if command -v mars &> /dev/null; then
-        mars_cmd="mars"
-    elif [ -f "Mars4_5.jar" ]; then
-        mars_cmd="java -jar Mars4_5.jar"
+        mars_cmd="mars nc \"$mips_file\""
     else
-        echo -e "${RED}✗ $name${NC}"
+        mars_cmd="java -jar Mars4_5.jar nc \"$mips_file\""
+    fi
+
+    if ! eval "$mars_cmd" > "$output_file" 2>&1; then
+        error_msg="ERRO EXECUÇÃO MARS"
+        echo -e "${RED}✗ $name ($error_msg)${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$name")
+        FAILED_TEST_NAMES+=("$name ($error_msg)")
         return 1
     fi
 
-    # Executa e captura output
-    eval "$mars_cmd nc \"$mips_file\" 2>&1" > "$output_file"
-
-    # Validação
-    if grep -q "$(cat $expected_file)" "$output_file" 2>/dev/null; then
-        echo -e "${GREEN}✓ $name${NC}"
-        PASSED_TESTS=$((PASSED_TESTS + 1))
-        return 0
-    else
-        echo -e "${RED}✗ $name${NC}"
+    # Validação do output
+    local expected_output=$(cat "$expected_file" 2>/dev/null || echo "")
+    local actual_output=$(cat "$output_file" 2>/dev/null || echo "")
+    
+    if [[ "$actual_output" != *"$expected_output"* ]]; then
+        error_msg="OUTPUT DIFERENTE"
+        # Mostra primeiras diferenças para debug
+        if [ ${#expected_output} -gt 0 ] && [ ${#actual_output} -gt 0 ]; then
+            error_msg+=" (exp: '$expected_output' | obt: '$actual_output')"
+        fi
+        echo -e "${RED}✗ $name ($error_msg)${NC}"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        FAILED_TEST_NAMES+=("$name")
+        FAILED_TEST_NAMES+=("$name ($error_msg)")
         return 1
     fi
+
+    echo -e "${GREEN}✓ $name${NC}"
+    PASSED_TESTS=$((PASSED_TESTS + 1))
+    return 0
 }
 
 # ============================================================================
@@ -109,294 +158,64 @@ run_test() {
 check_compiler() {
     if [ ! -f "$EXEC" ]; then
         echo -e "${RED}✗ Compilador não encontrado: $EXEC${NC}"
-        echo -e "${YELLOW}Compilar com: make build${NC}"
+        echo -e "${YELLOW}Compilar com: make -C src${NC}"
         exit 1
     fi
-    echo -e "${GREEN}✓ Compilador encontrado${NC}"
 }
 
 # ============================================================================
-# TESTES
+# LÓGICA PRINCIPAL
 # ============================================================================
 
-echo -e "\n${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║   Suite de Testes do Compilador Ada   ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════╝${NC}\n"
+echo -e "\n${BLUE}╔═══════════════════════════════╗${NC}"
+echo -e "${BLUE}║    Testes do Compilador Ada   ║${NC}"
+echo -e "${BLUE}╚═══════════════════════════════╝${NC}\n"
+
+# Se --clean foi passado, apagar e sair
+if [ "$CLEAN_ONLY" = true ]; then
+    clean_tests
+fi
+
+# Recompilar se necessário
+if [ "$REBUILD" = true ]; then
+    echo -e "${BLUE}Recompilando...${NC}"
+    if make -C src clean > /dev/null 2>&1; then
+        if make -C src build > /dev/null 2>&1; then
+            echo -e "${GREEN}✓ Recompilação bem-sucedida${NC}"
+        else
+            echo -e "${RED}✗ Erro na compilação${NC}"
+            exit 1
+        fi
+    else
+        echo -e "${RED}✗ Erro ao limpar${NC}"
+        exit 1
+    fi
+    echo ""
+fi
 
 check_compiler
 
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 1: Aritmética Básica
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_01_arithmetic" \
-'procedure Main is
-    x : Integer := 10;
-    y : Integer := 5;
-    z : Integer;
-begin
-    z := x + y;
-    Put_Line(str(z));
-end Main;' \
-'15'
+# ============================================================================
+# Ler e executar testes dos ficheiros
+# ============================================================================
 
-run_test "test_01_arithmetic"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 2: Subtração
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_02_subtraction" \
-'procedure Main is
-    x : Integer := 20;
-    y : Integer := 7;
-    z : Integer;
-begin
-    z := x - y;
-    Put_Line(str(z));
-end Main;' \
-'13'
-
-run_test "test_02_subtraction"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 3: Multiplicação
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_03_multiplication" \
-'procedure Main is
-    x : Integer := 6;
-    y : Integer := 7;
-    z : Integer;
-begin
-    z := x * y;
-    Put_Line(str(z));
-end Main;' \
-'42'
-
-run_test "test_03_multiplication"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 4: Divisão
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_04_division" \
-'procedure Main is
-    x : Integer := 24;
-    y : Integer := 4;
-    z : Integer;
-begin
-    z := x / y;
-    Put_Line(str(z));
-end Main;' \
-'6'
-
-run_test "test_04_division"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 5: Potenciação
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_05_power" \
-'procedure Main is
-    base : Integer := 2;
-    exp : Integer := 8;
-    resultado : Integer;
-begin
-    resultado := base ** exp;
-    Put_Line(str(resultado));
-end Main;' \
-'256'
-
-run_test "test_05_power"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 6: If-Then-Else (Verdadeiro)
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_06_if_true" \
-'procedure Main is
-    x : Integer := 15;
-    resultado : Integer;
-begin
-    if x > 10 then
-        resultado := 1;
-    else
-        resultado := 0;
-    end if;
-    Put_Line(str(resultado));
-end Main;' \
-'1'
-
-run_test "test_06_if_true"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 7: If-Then-Else (Falso)
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_07_if_false" \
-'procedure Main is
-    x : Integer := 5;
-    resultado : Integer;
-begin
-    if x > 10 then
-        resultado := 1;
-    else
-        resultado := 0;
-    end if;
-    Put_Line(str(resultado));
-end Main;' \
-'0'
-
-run_test "test_07_if_false"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 8: While Loop - Soma de 1 a 5
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_08_while_sum" \
-'procedure Main is
-    i : Integer := 1;
-    soma : Integer := 0;
-begin
-    while i <= 5 loop
-        soma := soma + i;
-        i := i + 1;
-    end loop;
-    Put_Line(str(soma));
-end Main;' \
-'15'
-
-run_test "test_08_while_sum"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 9: While Loop - Contagem Decrescente
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_09_while_countdown" \
-'procedure Main is
-    i : Integer := 5;
-    resultado : Integer := 0;
-begin
-    while i > 0 loop
-        resultado := i;
-        i := i - 1;
-    end loop;
-    Put_Line(str(resultado));
-end Main;' \
-'1'
-
-run_test "test_09_while_countdown"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 10: Fatorial de 5
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_10_factorial" \
-'procedure Main is
-    n : Integer := 5;
-    resultado : Integer := 1;
-    i : Integer := 1;
-begin
-    while i <= n loop
-        resultado := resultado * i;
-        i := i + 1;
-    end loop;
-    Put_Line(str(resultado));
-end Main;' \
-'120'
-
-run_test "test_10_factorial"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 11: Operações Booleanas - AND
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_11_boolean_and" \
-'procedure Main is
-    a : Boolean := True;
-    b : Boolean := True;
-    resultado : Boolean;
-begin
-    resultado := a and b;
-    if resultado then
-        Put_Line("Verdadeiro");
-    else
-        Put_Line("Falso");
-    end if;
-end Main;' \
-'Verdadeiro'
-
-run_test "test_11_boolean_and"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 12: Operações Booleanas - OR
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_12_boolean_or" \
-'procedure Main is
-    a : Boolean := True;
-    b : Boolean := False;
-    resultado : Boolean;
-begin
-    resultado := a or b;
-    if resultado then
-        Put_Line("Verdadeiro");
-    else
-        Put_Line("Falso");
-    end if;
-end Main;' \
-'Verdadeiro'
-
-run_test "test_12_boolean_or"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 13: Comparação - Igualdade
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_13_equality" \
-'procedure Main is
-    x : Integer := 42;
-    y : Integer := 42;
-    resultado : Boolean;
-begin
-    resultado := x = y;
-    if resultado then
-        Put_Line("Igual");
-    else
-        Put_Line("Diferente");
-    end if;
-end Main;' \
-'Igual'
-
-run_test "test_13_equality"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 14: Comparação - Menor Que
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_14_less_than" \
-'procedure Main is
-    x : Integer := 10;
-    y : Integer := 20;
-    resultado : Boolean;
-begin
-    resultado := x < y;
-    if resultado then
-        Put_Line("Menor");
-    else
-        Put_Line("Não menor");
-    end if;
-end Main;' \
-'Menor'
-
-run_test "test_14_less_than"
-
-# ─────────────────────────────────────────────────────────────────────────
-# Teste 15: Comparação - Menor ou Igual
-# ─────────────────────────────────────────────────────────────────────────
-register_test "test_15_less_equal" \
-'procedure Main is
-    x : Integer := 10;
-    y : Integer := 10;
-    resultado : Boolean;
-begin
-    resultado := x <= y;
-    if resultado then
-        Put_Line("Menor ou igual");
-    else
-        Put_Line("Maior");
-    end if;
-end Main;' \
-'Menor ou igual'
-
-run_test "test_15_less_equal"
+# Encontra todos os ficheiros .adb em test_cases e executa
+if ls "$TEST_DIR"/*.adb 1> /dev/null 2>&1; then
+    for ada_file in "$TEST_DIR"/*.adb; do
+        name=$(basename "$ada_file" .adb)
+        expected_file="$TEST_DIR/${name}.expected"
+        # Verifica se existe o ficheiro expected correspondente
+        if [ ! -f "$expected_file" ]; then
+            echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
+            continue
+        fi
+        run_test "$name"
+    done
+else
+    echo -e "${YELLOW}⚠ Nenhum ficheiro de teste encontrado em $TEST_DIR${NC}"
+    echo -e "${YELLOW}Cria ficheiros .ada e .expected em test_cases/{{NC}"
+    exit 1
+fi
 
 # ============================================================================
 # RESUMO
@@ -418,13 +237,12 @@ if [ $FAILED_TESTS -eq 0 ]; then
 else
     echo -e "\n${RED}╔════════════════════════════════════════╗${NC}"
     echo -e "${RED}║     ❌ Alguns testes falharam ❌      ║${NC}"
-    echo -e "${RED}╚════════════════════════════════════════╝${NC}\n" 
-    echo -e "${YELLOW}Ficheiros de teste disponíveis em:${NC} $TEST_DIR/"
-    echo -e "${YELLOW}Para debugar um teste:${NC}"
-    echo "  cat $TEST_DIR/test_XX_nome.ada       # Ver código Ada"
-    echo "  cat $TEST_DIR/test_XX_nome.mips      # Ver MIPS gerado"
-    echo "  cat $TEST_DIR/test_XX_nome.output    # Ver output do MARS"
-    echo "  cat $TEST_DIR/test_XX_nome.expected  # Ver output esperado"
+    echo -e "${RED}╚════════════════════════════════════════╝${NC}\n"
+    echo -e "${RED}Testes que falharam:${NC}"
+    for test in "${FAILED_TEST_NAMES[@]}"; do
+        echo -e "  ${RED}✗ $test${NC}"
+    done
     echo ""
     exit 1
 fi
+

@@ -3,6 +3,6 @@ procedure Main is
     y : Integer := 7;
     z : Integer;
 begin
-    z := x - y;
+    z = x - y;
     Put_Line(str(z));
 end Main;
