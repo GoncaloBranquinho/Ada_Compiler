@@ -243,6 +243,13 @@ else
         echo -e "  ${RED}✗ $test${NC}"
     done
     echo ""
+    echo -e "${YELLOW}Ficheiros de teste disponíveis em:${NC} $TEST_DIR/"
+    echo -e "${YELLOW}Para debugar um teste:${NC}"
+    echo "  cat $TEST_DIR/test_XX_nome.adb       # Ver código Ada"
+    echo "  cat $TEST_DIR/test_XX_nome.mips      # Ver MIPS gerado"
+    echo "  cat $TEST_DIR/test_XX_nome.output    # Ver output do MARS"
+    echo "  cat $TEST_DIR/test_XX_nome.expected  # Ver output esperado"
+    echo ""
     exit 1
 fi
 

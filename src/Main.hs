@@ -32,8 +32,8 @@ runCompiler file = do input <- readFile file
                       let baseName = dropExtension file
                       let ast = parse $ alexScanTokensInsensitive input
                       let (symtab,(errors,scopemem)) = evalState (buildSTProg ast) emptyST
-                      writeFile (baseName ++ "AST.txt") (show ast)
-                      writeFile (baseName ++ "Table.txt") (show (symtab,(errors,scopemem)))
+                      writeFile (baseName ++ "AST.debugging") (show ast)
+                      writeFile (baseName ++ "Table.debugging") (show (symtab,(errors,scopemem)))
                       if errors /= []
                         then exitWith (ExitFailure 1)
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
@@ -46,11 +46,11 @@ runCompiler file = do input <- readFile file
                                 --let k = show $ sxt' $ snd $ mipsCode
                                 --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
                                 --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
-                                writeFile (baseName ++ "IR.txt") (unlines $ map show (instr))
-                                writeFile (baseName ++ "IRNew.txt")  (show (livenessAnalysisResult))
-                                writeFile (baseName ++ "Addresses.txt") (show addresses)
+                                writeFile (baseName ++ "IR.debugging") (unlines $ map show (instr))
+                                writeFile (baseName ++ "IR2.debugging")  (show (livenessAnalysisResult))
+                                writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
-                                --writeFile (file ++ "Mips.txt") (k)
+                                --writeFile (file ++ ".mips") (k)
                                 exitWith ExitSuccess
                                 -}
                                 let scopesInfoList = Map.toList scopesInfo
@@ -58,8 +58,8 @@ runCompiler file = do input <- readFile file
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
-                                --writeFile (baseName ++ "IR.txt")  ((unlines $ map show instr) ++ show scopesInfoList)
-                                --writeFile (baseName ++ "Addresses.txt") (show addresses)
+                                --writeFile (baseName ++ "IR.debugging")  ((unlines $ map show instr) ++ show scopesInfoList)
+                                --writeFile (baseName ++ "Addresses.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)
                                 --putStrLn (intercalate "\n" mipsCode)
