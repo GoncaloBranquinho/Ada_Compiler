@@ -1,0 +1,34 @@
+BEGIN
+DECL "a@0" "Boolean"
+MOVEI "_t0@0" (TInt 1)
+MOVE "Boolean" "a@0" "_t0@0"
+DECL "b@0" "Boolean"
+MOVEI "_t0@0" (TInt 0)
+MOVE "Boolean" "b@0" "_t0@0"
+DECL "resultado@0" "Boolean"
+MOVE "Boolean" "_t0@0" "a@0"
+MOVEI "_t1@0" (TInt 0)
+COND (NE {val = "Integer"}) "_t0@0" "_t1@0" "label0" "label3"
+LABEL "label3"
+MOVE "Boolean" "_t0@0" "b@0"
+MOVEI "_t1@0" (TInt 0)
+COND (NE {val = "Integer"}) "_t0@0" "_t1@0" "label0" "label1"
+LABEL "label0"
+MOVEI "resultado@0" (TInt 1)
+JUMP "label2"
+LABEL "label1"
+MOVEI "resultado@0" (TInt 0)
+LABEL "label2"
+MOVE "Boolean" "_t0@0" "resultado@0"
+MOVEI "_t1@0" (TInt 0)
+COND (NE {val = "Integer"}) "_t0@0" "_t1@0" "label4" "label5"
+LABEL "label4"
+MOVEI "_t0@0" (TString "Verdadeiro")
+PRINT "_t0@0"
+JUMP "label6"
+LABEL "label5"
+MOVEI "_t0@0" (TString "Falso")
+PRINT "_t0@0"
+LABEL "label6"
+END
+[(0,[("a@0",4,False),("_t0@0",4,False),("b@0",4,False),("resultado@0",4,False),("_t1@0",4,False)])]

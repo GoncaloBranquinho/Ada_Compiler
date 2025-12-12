@@ -1,0 +1,16 @@
+BEGIN
+DECL "x@0" "Integer"
+MOVEI "_t0@0" (TInt 6)
+MOVE "Integer" "x@0" "_t0@0"
+DECL "y@0" "Integer"
+MOVEI "_t0@0" (TInt 7)
+MOVE "Integer" "y@0" "_t0@0"
+DECL "z@0" "Integer"
+MOVE "Integer" "_t0@0" "x@0"
+MOVE "Integer" "_t1@0" "y@0"
+OP (MULT {val = "Integer"}) "z@0" "_t0@0" "_t1@0"
+MOVE "Integer" "_t1@0" "z@0"
+TOSTR "Integer" "_t0@0" "_t1@0"
+PRINT "_t0@0"
+END
+[(0,[("x@0",4,False),("_t0@0",4,False),("y@0",4,False),("z@0",4,False),("_t1@0",4,False)])]

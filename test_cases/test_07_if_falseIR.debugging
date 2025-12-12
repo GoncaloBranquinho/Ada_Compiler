@@ -1,0 +1,19 @@
+BEGIN
+DECL "x@0" "Integer"
+MOVEI "_t0@0" (TInt 5)
+MOVE "Integer" "x@0" "_t0@0"
+DECL "resultado@0" "Integer"
+MOVEI "_t0@0" (TInt 10)
+MOVE "Integer" "_t1@0" "x@0"
+COND (LT {val = "Integer"}) "_t0@0" "_t1@0" "label0" "label1"
+LABEL "label0"
+MOVEI "resultado@0" (TInt 1)
+JUMP "label2"
+LABEL "label1"
+MOVEI "resultado@0" (TInt 0)
+LABEL "label2"
+MOVE "Integer" "_t1@0" "resultado@0"
+TOSTR "Integer" "_t0@0" "_t1@0"
+PRINT "_t0@0"
+END
+[(0,[("x@0",4,False),("_t0@0",4,False),("resultado@0",4,False),("_t1@0",4,False)])]

@@ -1,0 +1,1 @@
+fromList [("Falso",[Global "str1"]),("Verdadeiro",[Global "str0"]),("_t0@0",[RegI "$t1",RegF "$f2"]),("_t1@0",[RegI "$t4",RegF "$f3"]),("a@0",[RegI "$t0"]),("b@0",[RegI "$t2"]),("resultado@0",[RegI "$t3"])]

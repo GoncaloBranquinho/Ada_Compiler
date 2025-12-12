@@ -1,0 +1,1 @@
+Prog (DeclComp (DeclInit (DeclVarLast "i") TypeInteger (IntLit 5)) (DeclInit (DeclVarLast "resultado") TypeInteger (IntLit 0))) (ExecComp (WhileLoop (Lt (IntLit 0) (Var "i")) (ExecComp (Assign "resultado" (Var "i")) (Assign "i" (Sub (Var "i") (IntLit 1))))) (PutLine (ToStr (Var "resultado"))))

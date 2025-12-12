@@ -1,0 +1,16 @@
+BEGIN
+DECL "base@0" "Integer"
+MOVEI "_t0@0" (TInt 2)
+MOVE "Integer" "base@0" "_t0@0"
+DECL "exp@0" "Integer"
+MOVEI "_t0@0" (TInt 8)
+MOVE "Integer" "exp@0" "_t0@0"
+DECL "resultado@0" "Integer"
+MOVE "Integer" "_t0@0" "base@0"
+MOVE "Integer" "_t1@0" "exp@0"
+OP (POW {val = "Integer"}) "resultado@0" "_t0@0" "_t1@0"
+MOVE "Integer" "_t1@0" "resultado@0"
+TOSTR "Integer" "_t0@0" "_t1@0"
+PRINT "_t0@0"
+END
+[(0,[("base@0",4,False),("_t0@0",4,False),("exp@0",4,False),("resultado@0",4,False),("_t1@0",4,False)])]

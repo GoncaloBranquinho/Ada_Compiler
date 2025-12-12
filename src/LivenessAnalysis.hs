@@ -90,7 +90,7 @@ deadCodeElim n (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                            return finalState
 
 
-
+{-
 
 type PredFA    = Map.Map Int (Set.Set Int)
 type GenFA     = Map.Map Int (Set.Set String)

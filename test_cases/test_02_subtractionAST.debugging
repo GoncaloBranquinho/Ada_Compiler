@@ -1,0 +1,1 @@
+Prog (DeclComp (DeclComp (DeclInit (DeclVarLast "x") TypeInteger (IntLit 20)) (DeclInit (DeclVarLast "y") TypeInteger (IntLit 7))) (DeclNonInit (DeclVarLast "z") TypeInteger)) (ExecComp (Assign "z" (Sub (Var "x") (Var "y"))) (PutLine (ToStr (Var "z"))))
