@@ -68,6 +68,7 @@ clean_tests() {
         rm -f "$TEST_DIR"/*.bin
         rm -f "$TEST_DIR"/*.mips
         rm -f "$TEST_DIR"/*.output
+        rm -f "$TEST_DIR"/*.debugging
         echo -e "${GREEN}✓ Ficheiros temporários apagados${NC}"
     else
         echo -e "${YELLOW}Nenhum ficheiro de teste para apagar${NC}"
@@ -179,8 +180,8 @@ fi
 # Recompilar se necessário
 if [ "$REBUILD" = true ]; then
     echo -e "${BLUE}Recompilando...${NC}"
-    if make -C src clean > /dev/null 2>&1; then
-        if make -C src build > /dev/null 2>&1; then
+    if make -C src clean 2>&1; then
+        if make -C src build 2>&1; then
             echo -e "${GREEN}✓ Recompilação bem-sucedida${NC}"
         else
             echo -e "${RED}✗ Erro na compilação${NC}"
@@ -245,10 +246,14 @@ else
     echo ""
     echo -e "${YELLOW}Ficheiros de teste disponíveis em:${NC} $TEST_DIR/"
     echo -e "${YELLOW}Para debugar um teste:${NC}"
-    echo "  cat $TEST_DIR/test_XX_nome.adb       # Ver código Ada"
-    echo "  cat $TEST_DIR/test_XX_nome.mips      # Ver MIPS gerado"
-    echo "  cat $TEST_DIR/test_XX_nome.output    # Ver output do MARS"
-    echo "  cat $TEST_DIR/test_XX_nome.expected  # Ver output esperado"
+    echo "  cat $TEST_DIR/test_XX_nome.adb                 # Ver código Ada"
+    echo "  cat $TEST_DIR/test_XX_nomeAST.expected         # Ver AST gerada"
+    echo "  cat $TEST_DIR/test_XX_nomeTable.expected       # Ver output esperado"
+    echo "  cat $TEST_DIR/test_XX_nomeIRX.expected         # Ver Código Intermédio esperado"
+    echo "  cat $TEST_DIR/test_XX_nomeAllocation.expected  # Ver alocação de memória"
+    echo "  cat $TEST_DIR/test_XX_nome.mips                # Ver MIPS gerado"
+    echo "  cat $TEST_DIR/test_XX_nome.output              # Ver output do MARS"
+    echo "  cat $TEST_DIR/test_XX_nome.expected            # Ver output esperado"
     echo ""
     exit 1
 fi

@@ -58,8 +58,8 @@ runCompiler file = do input <- readFile file
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt $ snd $ mipsCode
-                                --writeFile (baseName ++ "IR.debugging")  ((unlines $ map show instr) ++ show scopesInfoList)
-                                --writeFile (baseName ++ "Addresses.debugging") (show addresses)
+                                writeFile (baseName ++ "IR.debugging")  ((unlines $ map show instr) ++ show scopesInfoList)
+                                writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)
                                 --putStrLn (intercalate "\n" mipsCode)
