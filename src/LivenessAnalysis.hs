@@ -30,9 +30,9 @@ prepareLA :: [Instr] -> State InfoLA InfoLA
 prepareLA [] = get >>= \t0 -> return t0
 prepareLA (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                       case x of
-                             JUMP l             -> put (s, g, k, i, o, c + 1, Map.insert l c m, instr)
-                             COND _ t1 t2 l1 l2 -> put (s, Map.insert c (Set.insert t1 (Set.insert t2 (Map.findWithDefault (Set.empty) c g))) g, k, i, o, c + 1, Map.insert l2 c (Map.insert l1 c m), instr)
-                             LABEL l            -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s)) else (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s), g, k, i, o, c + 1, m, instr)
+                             JUMP l             -> put (Map.insert c (Set.insert (Map.findWithDefault (-1) l m) (Map.findWithDefault (Set.empty) c s)) s, g, k, i, o, c + 1, Map.insert l c m, instr)
+                             COND _ t1 t2 l1 l2 -> put (Map.insert c (Set.insert (Map.findWithDefault (-1) l2 m) (Map.findWithDefault (Set.empty) c s)) (Map.insert c (Set.insert (Map.findWithDefault (-1) l1 m) (Map.findWithDefault (Set.empty) c s)) s), Map.insert c (Set.insert t1 (Set.insert t2 (Map.findWithDefault (Set.empty) c g))) g, k, i, o, c + 1, Map.insert l2 c (Map.insert l1 c m), instr)
+                             LABEL l            -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s)) else (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s), g, k, i, o, c + 1, Map.insert l c m, instr)
                              MOVE _ t1 t2       -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, Map.insert c (Set.insert t2 (Map.findWithDefault (Set.empty) c g)) g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
                              MOVEI t1 _         -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
                              OP _ t1 t2 t3      -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, Map.insert c (Set.insert t3 (Set.insert t2 (Map.findWithDefault (Set.empty) c g))) g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
@@ -82,7 +82,7 @@ deadCodeElim n [] = get >>= \t0 -> return t0
 deadCodeElim n (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                            case x of
                                   MOVE _ _ _ -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
-                                  
+
                                   OP _ _ _ _ -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
                                   _          -> (put (s, g, k, i, o, c, m, x:instr))
                            (_, _, _, _, _, _, _, instr') <- get
@@ -113,7 +113,7 @@ prepareFA [] = get >>= \t0 -> return t0
 prepareFA (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                       case x of
                              JUMP l             -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s)) else (Map.insert (Map.findWithDefault (-1) l m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l m) s)) s), g, k, i, o, c + 1, m, instr)
-                             COND _ t1 t2 l1 l2 -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l1 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l1 m) s)) (Map.insert (Map.findWithDefault (-1) l2 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l2 m) s)) s))) else (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l1 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l1 m) s)) (Map.insert (Map.findWithDefault (-1) l2 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l2 m) s)) s)), Map.insert c (Set.insert t1 (Set.insert t2 (Map.findWithDefault (Set.empty) c g))) g, k, i, o, c + 1, m, instr)
+                             COND _ t1 t2 l1 l2 -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l1 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l1 m) s)) (Map.insert (Map.findWithDefault (-1) l2 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l2 m) s)) s))) else (Map.findWithDefault (Set.empty) c s)) (Map.insert (Map.findWithDefault (-1) l1 m) (Set.insert c (Map.findWithDefault (Set.empty) (Map.findWithDefault (-1) l1 m) s)) (Map.insert (Map.findWithDefault (-1) l2 m) (Set.insert c >
                              LABEL l            -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) s) else s, g, k, i, o, c + 1, Map.insert l c m, instr)
                              MOVE _ t1 t2       -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) s) else s, Map.insert c (Set.insert t2 (Map.findWithDefault (Set.empty) c g)) g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
                              MOVEI t1 _         -> put (if (c /= 1) then (Map.insert c (Set.insert (c - 1) (Map.findWithDefault (Set.empty) c s)) s) else s, g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
@@ -150,11 +150,3 @@ buildInFA n = do
     newState <- get
 
     return newState
-
-iterateFA :: State InfoLA InfoLA
-iterateFA = do (s, g, k, i, o, c, m, instr) <- get
-               (s', g', k', i', o', c', m', instr') <- buildOutLA (c - 1)
-               finalState <- if (i /= i' || o /= o') then iterateLA else return (s', g', k', i', o', c', m', instr')
-               return finalState
-
--}
