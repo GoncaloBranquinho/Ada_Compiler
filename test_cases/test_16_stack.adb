@@ -38,6 +38,6 @@ begin
      V16 + V17 + V18 + V19 + V20 +
      V21 + V22 + V23 + V24 + V25 +
      V26 + V27 + V28 + V29 + V30;
-   Put_Line("Sum =" & str(V26));
+   Put_Line("Sum = " & str(V26));
 end Main;
 
