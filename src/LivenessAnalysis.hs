@@ -81,10 +81,11 @@ deadCodeElim :: Int -> [Instr] -> State InfoLA InfoLA
 deadCodeElim n [] = get >>= \t0 -> return t0
 deadCodeElim n (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                            case x of
-                                  MOVE _ _ _ -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
-                                  
-                                  OP _ _ _ _ -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
-                                  _          -> (put (s, g, k, i, o, c, m, x:instr))
+                                  MOVE _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  MOVEI _ _   -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  OP _ _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  DECL _ _    -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  _           -> (put (s, g, k, i, o, c, m, x:instr))
                            (_, _, _, _, _, _, _, instr') <- get
                            finalState <- if (n < c - 1) then deadCodeElim (n + 1) xs else (return (s, g, k, i, o, c, m, reverse instr'))
                            return finalState

@@ -104,7 +104,7 @@ IO : id "(" Exp ")"        { if $1 == "put_line"
                            }
    | id "(" id "," id ")"  { if $1 == "get_line"
                                 then GetLine $3 $5
-                                else error ("Unknown exec function: " ++ $1)
+                              else error ("Unknown exec function: " ++ $1)
                           } 
 
 DeclBlock : declare DeclCompStart begin ExecCompStart end { DeclBlock $2 $4 }

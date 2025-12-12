@@ -37,7 +37,7 @@ runCompiler file = do input <- readFile file
                       if errors /= []
                         then exitWith (ExitFailure 1)
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
-                                {-let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA >>= \t1 -> deadCodeElim 1 instr >>= \t2 -> return t2) emptyLA
+                                let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA >>= \t1 -> deadCodeElim 1 instr >>= \t2 -> return t2) emptyLA
                                 let (newScopesInfo,newStringsLits,newFloatLits, whileInfo) = evalState (analyzeInstr (sxt livenessAnalysisResult)) (Map.empty, [], [], Map.empty)
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder newStringsLits newFloatLits) emptyMem
@@ -47,23 +47,22 @@ runCompiler file = do input <- readFile file
                                 --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
                                 --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
                                 writeFile (baseName ++ "IR.debugging") (unlines $ map show (instr))
-                                writeFile (baseName ++ "IR2.debugging")  (show (livenessAnalysisResult))
+                                writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))) ++ (show livenessAnalysisResult))
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)
                                 exitWith ExitSuccess
-                                -}
+                                {-
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
-                                --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
-                                --let k = show $ sxt $ snd $ mipsCode
                                 writeFile (baseName ++ "IR.debugging")  ((unlines $ map show instr) ++ show scopesInfoList)
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)
                                 --putStrLn (intercalate "\n" mipsCode)
                                 exitWith ExitSuccess
+                                -}
 
 sxt' :: (a, b, c, d, e, f, g, h, i) -> f
 sxt' (_, _, _, _, _, x, _, _, _) = x

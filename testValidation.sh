@@ -27,33 +27,62 @@ PASSED_TESTS=0
 FAILED_TESTS=0
 declare -a FAILED_TEST_NAMES
 
+
+
+show_help() {
+    echo -e "${BLUE}╔════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}║           Script de Testes do Compilador Ada                   ║${NC}"
+    echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${CYAN}USO:${NC}"
+    echo "  ./testValidation.sh [opções] [ficheiro_teste]"
+    echo ""
+    echo -e "${CYAN}OPÇÕES:${NC}"
+    echo "  (sem argumentos)      Recompila tudo e executa todos os testes"
+    echo "  --no-rebuild          Apenas executa testes (sem recompilar)"
+    echo "  -t FILE.adb           Executa um teste individual (ex: test_01_simple.adb)"
+    echo "  --clean               Apaga todos os ficheiros de teste temporários"
+    echo "  -h                    Mostra esta ajuda"
+    echo ""
+    echo -e "${CYAN}EXEMPLOS:${NC}"
+    echo "  # Executar todos os testes"
+    echo "  ./testValidation.sh"
+    echo ""
+    echo "  # Testar um ficheiro específico"
+    echo "  ./testValidation.sh -t test_01_simple.adb"    
+    exit 0
+}
+
+
+
 # ============================================================================
 # Processar argumentos
 # ============================================================================
+
 REBUILD=true
 CLEAN_ONLY=false
+SINGLE_TEST=""
 
-for arg in "$@"; do
-    case "$arg" in
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -t)
+            REBUILD=false
+            SINGLE_TEST="$2"
+            shift 2
+            ;;
         --no-rebuild)
             REBUILD=false
+            shift
             ;;
         --clean)
             CLEAN_ONLY=true
+            shift
             ;;
-        -h|--help)
-            echo "Uso: ./testValidation.sh [opções]"
-            echo ""
-            echo "Opções:"
-            echo "  (sem argumentos)  Recompila tudo e executa testes"
-            echo "  --no-rebuild      Apenas executa testes (sem recompilar)"
-            echo "  --clean           Apaga todos os ficheiros de teste"
-            echo "  -h, --help        Mostra esta ajuda"
-            exit 0
+        -h)
+            show_help
             ;;
         *)
-            echo "Argumento desconhecido: $arg"
-            echo "Use ./testValidation.sh --help para ver as opções"
+            echo "Argumento desconhecido: $1"
             exit 1
             ;;
     esac
@@ -79,13 +108,15 @@ clean_tests() {
 # ============================================================================
 # Função para executar um teste
 # ============================================================================
-# Função para executar um teste (versão modificada)
+
 run_test() {
     local name=$1
     local ada_file="$TEST_DIR/${name}.adb"
     local mips_file="$TEST_DIR/${name}.mips"
     local expected_file="$TEST_DIR/${name}.expected"
     local output_file="$TEST_DIR/${name}.output"
+    local input_file="$TEST_DIR/${name}.input"
+
     local error_msg=""
 
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
@@ -119,9 +150,17 @@ run_test() {
 
     # Executa no MARS e captura erros
     if command -v mars &> /dev/null; then
-        mars_cmd="mars nc \"$mips_file\""
+        if [ -f "$input_file" ]; then
+            mars_cmd="mars nc \"$mips_file\" < \"$input_file\""
+        else
+            mars_cmd="mars nc \"$mips_file\""
+        fi
     else
-        mars_cmd="java -jar Mars4_5.jar nc \"$mips_file\""
+        if [ -f "$input_file" ]; then
+            mars_cmd="java -jar Mars4_5.jar nc \"$mips_file\" < \"$input_file\""
+        else
+            mars_cmd="java -jar Mars4_5.jar nc \"$mips_file\""
+        fi
     fi
 
     if ! eval "$mars_cmd" > "$output_file" 2>&1; then
@@ -200,22 +239,36 @@ check_compiler
 # Ler e executar testes dos ficheiros
 # ============================================================================
 
-# Encontra todos os ficheiros .adb em test_cases e executa
-if ls "$TEST_DIR"/*.adb 1> /dev/null 2>&1; then
-    for ada_file in "$TEST_DIR"/*.adb; do
-        name=$(basename "$ada_file" .adb)
-        expected_file="$TEST_DIR/${name}.expected"
-        # Verifica se existe o ficheiro expected correspondente
-        if [ ! -f "$expected_file" ]; then
-            echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
-            continue
-        fi
-        run_test "$name"
-    done
+# Teste individual se a flag -t foi passada
+if [ -n "$SINGLE_TEST" ]; then
+    name=$(basename "$SINGLE_TEST" .adb)
+    expected_file="$TEST_DIR/${name}.expected"
+    # Verifica se existe o ficheiro expected correspondente
+    if [ ! -f "$expected_file" ]; then
+        echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
+        continue
+    fi
+    run_test "$name"
+
 else
-    echo -e "${YELLOW}⚠ Nenhum ficheiro de teste encontrado em $TEST_DIR${NC}"
-    echo -e "${YELLOW}Cria ficheiros .ada e .expected em test_cases/{{NC}"
-    exit 1
+
+  # Encontra todos os ficheiros .adb em test_cases e executa
+  if ls "$TEST_DIR"/*.adb 1> /dev/null 2>&1; then
+      for ada_file in "$TEST_DIR"/*.adb; do
+          name=$(basename "$ada_file" .adb)
+          expected_file="$TEST_DIR/${name}.expected"
+          # Verifica se existe o ficheiro expected correspondente
+          if [ ! -f "$expected_file" ]; then
+              echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
+              continue
+          fi
+          run_test "$name"
+      done
+  else
+      echo -e "${YELLOW}⚠ Nenhum ficheiro de teste encontrado em $TEST_DIR${NC}"
+      echo -e "${YELLOW}Cria ficheiros .ada e .expected em test_cases/{{NC}"
+      exit 1
+  fi
 fi
 
 # ============================================================================
@@ -246,14 +299,15 @@ else
     echo ""
     echo -e "${YELLOW}Ficheiros de teste disponíveis em:${NC} $TEST_DIR/"
     echo -e "${YELLOW}Para debugar um teste:${NC}"
-    echo "  cat $TEST_DIR/test_XX_nome.adb                 # Ver código Ada"
-    echo "  cat $TEST_DIR/test_XX_nomeAST.expected         # Ver AST gerada"
-    echo "  cat $TEST_DIR/test_XX_nomeTable.expected       # Ver output esperado"
-    echo "  cat $TEST_DIR/test_XX_nomeIRX.expected         # Ver Código Intermédio esperado"
-    echo "  cat $TEST_DIR/test_XX_nomeAllocation.expected  # Ver alocação de memória"
-    echo "  cat $TEST_DIR/test_XX_nome.mips                # Ver MIPS gerado"
-    echo "  cat $TEST_DIR/test_XX_nome.output              # Ver output do MARS"
-    echo "  cat $TEST_DIR/test_XX_nome.expected            # Ver output esperado"
+    echo "  cat $TEST_DIR/test_XX_nome.adb                  # Ver código Ada"
+    echo "  cat $TEST_DIR/test_XX_nomeAST.debugging         # Ver AST gerada"
+    echo "  cat $TEST_DIR/test_XX_nomeTable.debugging       # Ver Tabela de Símbolos"
+    echo "  cat $TEST_DIR/test_XX_nomeIR.debugging          # Ver Código Intermédio"
+    echo "  cat $TEST_DIR/test_XX_nomeIROptimized.debugging # Ver Código Intermédio Otimizado"
+    echo "  cat $TEST_DIR/test_XX_nomeAllocation.expected   # Ver alocação de memória"
+    echo "  cat $TEST_DIR/test_XX_nome.mips                 # Ver MIPS gerado"
+    echo "  cat $TEST_DIR/test_XX_nome.output               # Ver output do MARS"
+    echo "  cat $TEST_DIR/test_XX_nome.expected             # Ver output esperado"
     echo ""
     exit 1
 fi
