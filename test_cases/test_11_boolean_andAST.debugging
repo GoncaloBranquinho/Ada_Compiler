@@ -1,1 +1,0 @@
-Prog (DeclComp (DeclComp (DeclInit (DeclVarLast "a") TypeBoolean TrueLit) (DeclInit (DeclVarLast "b") TypeBoolean TrueLit)) (DeclNonInit (DeclVarLast "resultado") TypeBoolean)) (ExecComp (Assign "resultado" (And (Var "a") (Var "b"))) (IfThenElse (Var "resultado") (PutLine (StringLit "Verdadeiro")) (PutLine (StringLit "Falso"))))

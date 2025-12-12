@@ -1,1 +1,0 @@
-Prog (DeclComp (DeclComp (DeclInit (DeclVarLast "base") TypeInteger (IntLit 2)) (DeclInit (DeclVarLast "exp") TypeInteger (IntLit 8))) (DeclNonInit (DeclVarLast "resultado") TypeInteger)) (ExecComp (Assign "resultado" (Pow (Var "base") (Var "exp"))) (PutLine (ToStr (Var "resultado"))))
