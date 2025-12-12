@@ -6,4 +6,4 @@ parser
 Parser.hs
 *.txt
 *.jar
-scripts/scripts/
+test_cases/

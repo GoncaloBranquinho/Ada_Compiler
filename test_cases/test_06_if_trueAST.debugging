@@ -1,1 +1,0 @@
-Prog (DeclComp (DeclInit (DeclVarLast "x") TypeInteger (IntLit 15)) (DeclNonInit (DeclVarLast "resultado") TypeInteger)) (ExecComp (IfThenElse (Lt (IntLit 10) (Var "x")) (Assign "resultado" (IntLit 1)) (Assign "resultado" (IntLit 0))) (PutLine (ToStr (Var "resultado"))))

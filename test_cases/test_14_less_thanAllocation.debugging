@@ -1,1 +1,0 @@
-fromList [("Menor",[Global "str0"]),("N\227o menor",[Global "str1"]),("_t0@0",[RegI "$t1",RegF "$f2"]),("_t1@0",[RegI "$t4",RegF "$f3"]),("resultado@0",[RegI "$t3"]),("x@0",[RegI "$t0"]),("y@0",[RegI "$t2"])]
