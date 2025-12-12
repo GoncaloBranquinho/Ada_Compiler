@@ -4,5 +4,5 @@ procedure Main is
     z : Integer;
 begin
     z := x + y;
-    Put_Line(strz));
+    Put_Line(str(z));
 end Main;
