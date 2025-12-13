@@ -83,9 +83,9 @@ deadCodeElim :: [(Int, Instr)] -> State InfoLA InfoLA
 deadCodeElim [] = get >>= \t0 -> return t0
 deadCodeElim ((n, x):xs) = do (s, g, k, i, o, c, m, instr) <- get
                               case x of
-                                     MOVE _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (Map.delete n s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
-                                     MOVEI _ _   -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (Map.delete n s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
-                                     OP _ _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (Map.delete n s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
+                                     MOVE _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
+                                     MOVEI _ _   -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
+                                     OP _ _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
                                      --DECL _ _    -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, Map.delete n i, Map.delete n o, c, m, (n, x):instr))
                                      _           -> (put (s, g, k, i, o, c, m, (n, x):instr))
                               (s', g', k', i', o', c', m', instr') <- get
