@@ -76,7 +76,9 @@ iterateLA = do (s, g, k, i, o, c, m, instr) <- get
 
 callDeadCodeElim :: Int -> [Instr] -> State InfoLA InfoLA
 callDeadCodeElim n [] = get >>= \t0 -> return t0
-callDeadCodeElim n xs = do (s, g, k, i, o, c, m, instr) <- get
+callDeadCodeElim n xs = do put (emptyLA)
+                           prepareLA xs
+                           iterateLA
                            (s', g', k', i', o', c', m', instr') <- deadCodeElim n xs
                            put (s', g', k', i', o', c', m', [])
                            finalState <- if ((length xs) > (length instr')) then (callDeadCodeElim n instr') else return (s', g', k', i', o', c', m', instr')
