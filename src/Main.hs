@@ -37,18 +37,17 @@ runCompiler file = do input <- readFile file
                       if errors /= []
                         then exitWith (ExitFailure 1)
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
-                                let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA (zip [1..(length instr)] instr) >>= \t2 -> return (map (\x -> snd x) $ sxt t2)) emptyLA
-                                let (newScopesInfo,newStringsLits,newFloatLits, whileInfo) = evalState (analyzeInstr (livenessAnalysisResult)) (Map.empty, [], [], Map.empty)
+                                let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA >>= \t1 -> callDeadCodeElim 1 instr >>= \t2 -> return t2) emptyLA
+                                let (newScopesInfo,newStringsLits,newFloatLits, whileInfo) = evalState (analyzeInstr (sxt livenessAnalysisResult)) (Map.empty, [], [], Map.empty)
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder newStringsLits newFloatLits) emptyMem
-                                let mipsCode = evalState (transMips (livenessAnalysisResult) newStringsLits newFloatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
+                                let mipsCode = evalState (transMips (sxt livenessAnalysisResult) newStringsLits newFloatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let k = show $ sxt' $ snd $ mipsCode
                                 --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
                                 --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
                                 writeFile (baseName ++ "IR.debugging") (unlines $ map show (instr))
-                                writeFile (baseName ++ "IROptimized.debugging")  ((show ((livenessAnalysisResult))))
---                                writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))))
+                                writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))))
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
                                 --writeFile (file ++ ".mips") (k)

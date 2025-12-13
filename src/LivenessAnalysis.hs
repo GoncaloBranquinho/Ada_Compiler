@@ -8,7 +8,7 @@ import IR
 import Data.List
 import Control.Monad.State
 import Control.Monad (when)
-import Data.Foldable
+
 
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as Map
@@ -21,7 +21,7 @@ type OutLA     = Map.Map Int (Set.Set String)
 type CounterLA = Int
 type MapLabelToInstrLA = Map.Map String Int
 
-type InfoLA = (SuccLA, GenLA, KillLA, InLA, OutLA, CounterLA, MapLabelToInstrLA, [(Int, Instr)])
+type InfoLA = (SuccLA, GenLA, KillLA, InLA, OutLA, CounterLA, MapLabelToInstrLA, [Instr])
 
 emptyLA :: InfoLA
 emptyLA = (Map.empty, Map.empty, Map.empty, Map.empty, Map.empty, 1, Map.empty, [])
@@ -39,7 +39,6 @@ prepareLA (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
                              PRINT t1           -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c g)) g, k, i, o, c + 1, m, instr)
                              READ t1 t2         -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, g, Map.insert c (Set.insert t1 (Set.insert t2 (Map.findWithDefault (Set.empty) c k))) k, i, o, c + 1, m, instr)
                              IR.TOSTR _ t1 t2   -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, Map.insert c (Set.insert t2 (Map.findWithDefault (Set.empty) c g)) g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
-                             DECL t1 _          -> put (if (xs /= []) then (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s) else s, g, Map.insert c (Set.insert t1 (Map.findWithDefault (Set.empty) c k)) k, i, o, c + 1, m, instr)
                              _                  -> if (xs /= []) then (put (Map.insert c (Set.insert (c + 1) (Map.findWithDefault (Set.empty) c s)) s, g, k, i, o, c + 1, m, instr)) else (put (s, g, k, i, o, c + 1, m, instr))
                       newState <- prepareLA xs
                       return newState
@@ -47,50 +46,54 @@ prepareLA (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
 
 buildOutLA :: Int -> State InfoLA InfoLA
 buildOutLA 0 = get >>= \t0 -> return t0
-buildOutLA n = do (s, g, k, i, o, c, m, instr) <- get
-               --  (s'', _, _, _, _, _, _, _) <- get
-                  let s' = Map.findWithDefault Set.empty n s--''
-               --    mapM (\x -> buildInLA x) (Set.toList s')
-               -- (s, g, k, i, o, c, m, instr) <- get
-                  let newOut = Set.unions (map (\x -> Map.findWithDefault Set.empty x i) (Set.toList s'))
-                  when (newOut /= Map.findWithDefault Set.empty n o) $ put (s, g, k, i, Map.insert n newOut o, c, m, instr)
-                  newState <- get
-                  return newState
+buildOutLA n = do
+    (s, g, k, i, o, c, m, instr) <- buildInLA n
+
+    let s' = Map.findWithDefault Set.empty n s
+        newOut = Set.unions (map (\x -> Map.findWithDefault Set.empty x i) (Set.toList s'))
+    when (newOut /= Map.findWithDefault Set.empty n o) $ put (s, g, k, i, Map.insert n newOut o, c, m, instr)
+    newState <- get
+    return newState
 
 buildInLA :: Int -> State InfoLA InfoLA
 buildInLA 0 = get >>= \t0 -> return t0
-buildInLA n = do (s, g, k, i, o, c, m, instr) <- get
+buildInLA n = do (s, g, k, i, o, c, m, instr) <- buildOutLA (n - 1)
                  let g'  = Map.findWithDefault Set.empty n g
                      o'  = Map.findWithDefault Set.empty n o
-                     k'  = Map.findWithDefault Set.empty n k
+                     k' = Map.findWithDefault Set.empty n k
                      newIn = Set.union g' (Set.difference o' k')
                  when (newIn /= Map.findWithDefault Set.empty n i) $ put (s, g, k, Map.insert n newIn i, o, c, m, instr)
                  newState <- get
                  return newState
 
 
-iterateLA :: [(Int, Instr)] -> State InfoLA InfoLA
-iterateLA xs = do (s, g, k, i, o, c, m, instr) <- get
-                  mapM (\x -> buildOutLA x >>= \t0 -> buildInLA x >>= \t1 -> return t1) [(c - 1), (c - 2)..1]
-                  (s', g', k', i', o', c', m', instr') <- deadCodeElim xs
-                  put (s', g', k', i', o', c', m', [])
-                  finalState <- if (i == i' && o == o') then return (s', g', k', i', o', c', m', instr') else iterateLA instr'
-                  return finalState
+iterateLA :: State InfoLA InfoLA
+iterateLA = do (s, g, k, i, o, c, m, instr) <- get
+               (s', g', k', i', o', c', m', instr') <- buildOutLA (c - 1)
+               finalState <- if (i /= i' || o /= o') then iterateLA else return (s', g', k', i', o', c', m', instr')
+               return finalState
 
--- OTIMIZAR PARA NAO RECALCULAR AS LISTAS: UMA SUGESTAO SERA DUPLICAR A FUNCAO COM A PEQUENA DIFERENCA DE NUMA NAO ALTERAR INSTR
 
-deadCodeElim :: [(Int, Instr)] -> State InfoLA InfoLA
-deadCodeElim [] = get >>= \t0 -> return t0
-deadCodeElim ((n, x):xs) = do (s, g, k, i, o, c, m, instr) <- get
-                              case x of
-                                     MOVE _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
-                                     MOVEI _ _   -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
-                                     OP _ _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, (n, x):instr))
-                                     --DECL _ _    -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, Map.delete n i, Map.delete n o, c, m, (n, x):instr))
-                                     _           -> (put (s, g, k, i, o, c, m, (n, x):instr))
-                              (s', g', k', i', o', c', m', instr') <- get
-                              finalState <- if (n < c - 1) then deadCodeElim xs else (return (s', g', k', i', o', c', m', reverse instr'))
-                              return finalState
+callDeadCodeElim :: Int -> [Instr] -> State InfoLA InfoLA
+callDeadCodeElim n [] = get >>= \t0 -> return t0
+callDeadCodeElim n xs = do (s, g, k, i, o, c, m, instr) <- get
+                           (s', g', k', i', o', c', m', instr') <- deadCodeElim n xs
+                           put (s', g', k', i', o', c', m', [])
+                           finalState <- if ((length xs) > (length instr')) then (callDeadCodeElim n instr') else return (s', g', k', i', o', c', m', instr')
+                           return finalState
+
+deadCodeElim :: Int -> [Instr] -> State InfoLA InfoLA
+deadCodeElim n [] = get >>= \t0 -> return t0
+deadCodeElim n (x:xs) = do (s, g, k, i, o, c, m, instr) <- get
+                           case x of
+                                  MOVE _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  MOVEI _ _   -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  OP _ _ _ _  -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, Map.delete n g, Map.delete n k, Map.delete n i, Map.delete n o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  --DECL _ _    -> if (Set.null $ Set.intersection (Map.findWithDefault Set.empty n k) (Map.findWithDefault Set.empty n o)) then (put (s, g, k, i, o, c, m, instr)) else (put (s, g, k, i, o, c, m, x:instr))
+                                  _           -> (put (s, g, k, i, o, c, m, x:instr))
+                           (_, _, _, _, _, _, _, instr') <- get
+                           finalState <- if (n < c - 1) then deadCodeElim (n + 1) xs else (return (s, g, k, i, o, c, m, reverse instr'))
+                           return finalState
 
 
 {-
