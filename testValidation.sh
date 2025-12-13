@@ -35,21 +35,21 @@ show_help() {
     echo -e "${BLUE}╚════════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "${CYAN}USO:${NC}"
-    echo "  ./testValidation.sh [opções] [ficheiro_teste]"
+    echo "  ./testValidation.sh [opções] [ficheiro(s)_teste]"
     echo ""
     echo -e "${CYAN}OPÇÕES:${NC}"
-    echo "  (sem argumentos)      Recompila tudo e executa todos os testes"
-    echo "  --no-rebuild          Apenas executa testes (sem recompilar)"
-    echo "  -t FILE.adb           Executa um teste individual (ex: test_01_simple.adb)"
-    echo "  --clean               Apaga todos os ficheiros de teste temporários"
-    echo "  -h                    Mostra esta ajuda"
+    echo "  -e                                Apenas executa testes (sem recompilar)"
+    echo "  -c                                Apaga todos os ficheiros de teste temporários"
+    echo "  -h                                Mostra esta ajuda"
+    echo "  (sem ficheiros nos argumentos)    Executa todos os testes"
+    echo "  (com ficheiros nos argumentos)    Executa apenas esses testes"
     echo ""
     echo -e "${CYAN}EXEMPLOS:${NC}"
     echo "  # Executar todos os testes"
     echo "  ./testValidation.sh"
     echo ""
-    echo "  # Testar um ficheiro específico"
-    echo "  ./testValidation.sh -t test_01_simple.adb"    
+    echo "  # Testar um ficheiro específico sem recompilar"
+    echo "  ./testValidation.sh -e test_01_simple.adb"
     exit 0
 }
 
@@ -61,29 +61,26 @@ show_help() {
 
 REBUILD=true
 CLEAN_ONLY=false
-SINGLE_TEST=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        -t)
-            REBUILD=false
-            SINGLE_TEST="$2"
-            shift 2
-            ;;
-        --no-rebuild)
+        -e)
             REBUILD=false
             shift
             ;;
-        --clean)
+        -c)
             CLEAN_ONLY=true
             shift
             ;;
         -h)
             show_help
             ;;
-        *)
+        -*)
             echo "Argumento desconhecido: $1"
             exit 1
+            ;;
+        *)
+            break
             ;;
     esac
 done
@@ -240,16 +237,24 @@ check_compiler
 # ============================================================================
 
 # Teste individual se a flag -t foi passada
-if [ -n "$SINGLE_TEST" ]; then
-    name=$(basename "$SINGLE_TEST" .adb)
-    expected_file="$TEST_DIR/${name}.expected"
-    # Verifica se existe o ficheiro expected correspondente
-    if [ ! -f "$expected_file" ]; then
-        echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
-        continue
-    fi
-    run_test "$name"
 
+if [ $# -gt 0 ]; then
+    for arg in "$@"; do
+        name=$(basename "$arg" .adb)
+        ada_file="$TEST_DIR/${name}.adb"
+        expected_file="$TEST_DIR/${name}.expected"
+
+        if [ ! -f "$ada_file" ]; then
+            echo -e "${YELLOW}⚠ Ficheiro de teste não encontrado: $ada_file${NC}"
+            continue
+        fi
+        if [ ! -f "$expected_file" ]; then
+            echo -e "${YELLOW}⚠ Ficheiro esperado não encontrado: $expected_file${NC}"
+            continue
+        fi
+
+        run_test "$name"
+    done
 else
 
   # Encontra todos os ficheiros .adb em test_cases e executa
