@@ -39,7 +39,7 @@ runCompiler file = do input <- readFile file
                         else do let (instr, scopesInfo, finishOrder, stringLits, floatLits,whileInfo) = evalState (transAST ast (symtab,scopemem)) emptyIR
                                 let livenessAnalysisResult = evalState (prepareLA instr >>= \t0 -> iterateLA >>= \t1 -> callDeadCodeElim 1 instr >>= \t2 -> return t2) emptyLA
                                 let (newScopesInfo,newStringsLits,newFloatLits, whileInfo) = evalState (analyzeInstr (sxt livenessAnalysisResult)) (Map.empty, [], [], Map.empty)
-                                let scopesInfoList = Map.toList scopesInfo
+                                let scopesInfoList = Map.toList newScopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder newStringsLits newFloatLits) emptyMem
                                 let mipsCode = evalState (transMips (sxt livenessAnalysisResult) newStringsLits newFloatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)

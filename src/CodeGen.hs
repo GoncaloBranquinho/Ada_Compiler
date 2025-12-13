@@ -408,16 +408,16 @@ transIR ((IR.TOSTR t t1 t2):remainder) = do t1' <- getLocation t1 "String"
                                             changeContent t1 ([Var t1])
                                             let instrExec = case (t, t1', t2') of
                                                                                ("Float", Stack _, Stack _)   -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["s.s $v0, " ++ t1'' ++ "($fp)"]
-                                                                               ("Float", Stack _, RegF _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["mov.s " ++ t1'' ++ ", $v0"]
-                                                                               ("Float", RegI _, Stack _)    -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
+                                                                               ("Float", Stack _, RegF _)    -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["s.s $v0, " ++ t1'' ++ "($fp)"]
+                                                                               ("Float", RegI _, Stack _)    -> ["l.s $f12, " ++ t2'' ++ "($fp)"] ++ ["jal ftos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                ("Float", RegI _, RegF _)     -> ["mov.s $f12, " ++ t2''] ++ ["jal ftos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                ("Boolean", Stack _, Stack _)         -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal btos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
-                                                                               ("Boolean", Stack _, RegI _)          -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal btos"] ++ ["move " ++ t1'' ++ ", $v0"]
-                                                                               ("Boolean", RegI _, Stack _)          -> ["move $a0, " ++ t2''] ++ ["jal btos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
+                                                                               ("Boolean", Stack _, RegI _)          -> ["move $a0, " ++ t2''] ++ ["jal btos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
+                                                                               ("Boolean", RegI _, Stack _)          -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal btos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                ("Boolean", RegI _, RegI _)           -> ["move $a0, " ++ t2''] ++ ["jal btos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                (_, Stack _, Stack _)         -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
-                                                                               (_, Stack _, RegI _)          -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
-                                                                               (_, RegI _, Stack _)          -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
+                                                                               (_, Stack _, RegI _)          -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["sw $v0, " ++ t1'' ++ "($fp)"]
+                                                                               (_, RegI _, Stack _)          -> ["lw $a0, " ++ t2'' ++ "($fp)"] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                                                                (_, RegI _, RegI _)           -> ["move $a0, " ++ t2''] ++ ["jal itos"] ++ ["move " ++ t1'' ++ ", $v0"]
                                             instrNext <- transIR remainder
                                             return (instrExec ++ instrNext)

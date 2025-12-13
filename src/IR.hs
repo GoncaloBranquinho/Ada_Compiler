@@ -470,6 +470,5 @@ transExp (Not cond1) table dest = do label1 <- newLabel
 transExp (ToStr exp) table dest = do t1 <- newTemp
                                      addTable t1 4 False
                                      code1 <- transExp (exp) table t1
-                                     popTemp 1
                                      typ <- getVarTyp
                                      return (code1 ++ [IR.TOSTR typ dest t1])
