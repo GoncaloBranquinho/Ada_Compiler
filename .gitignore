@@ -9,3 +9,4 @@ test_cases/*
 !test_cases/
 !test_cases/*.adb
 !test_cases/*.expected
+!test_cases/*.input
