@@ -49,7 +49,7 @@ show_help() {
     echo "  ./testValidation.sh"
     echo ""
     echo "  # Testar um ficheiro específico sem recompilar"
-    echo "  ./testValidation.sh -e test_01_simple.adb"
+    echo "  ./testValidation.sh -e test_01_arithmetric.adb"
     exit 0
 }
 
