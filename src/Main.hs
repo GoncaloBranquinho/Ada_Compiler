@@ -43,24 +43,19 @@ runCompiler file = do input <- readFile file
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder newStringsLits newFloatLits) emptyMem
                                 let mipsCode = evalState (transMips (sxt livenessAnalysisResult) newStringsLits newFloatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 --let mipsCode = runState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
-                                --let k = show $ sxt' $ snd $ mipsCode
-                                --writeFile (file ++ "compare2.txt") (show (newStringsLits) ++ show newFloatLits)
-                                --writeFile (file ++ "compare1.txt") (show (stringLits)  ++ show floatLits)
                                 writeFile (baseName ++ "IR.debugging") (unlines $ map show (instr))
                                 writeFile (baseName ++ "IROptimized.debugging")  ((unlines $ map show (sxt (livenessAnalysisResult))))
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
-                                --writeFile (file ++ ".mips") (k)
                                 exitWith ExitSuccess
                                 {-
+                                -- Sem liveness analysis
                                 let scopesInfoList = Map.toList scopesInfo
                                 let (addresses, scopeMemoryInfo) = evalState (allocate scopesInfoList finishOrder stringLits floatLits) emptyMem
                                 let mipsCode = evalState (transMips instr stringLits floatLits)  (0,[],addresses,scopeMemoryInfo,finishOrder,Map.empty,0,0,whileInfo)
                                 writeFile (baseName ++ "IR.debugging")  ((unlines $ map show instr) ++ show scopesInfoList)
                                 writeFile (baseName ++ "Allocation.debugging") (show addresses)
                                 writeFile (baseName ++ ".mips") (intercalate "\n" mipsCode)
-                                --writeFile (file ++ ".mips") (k)
-                                --putStrLn (intercalate "\n" mipsCode)
                                 exitWith ExitSuccess
                                 -}
 

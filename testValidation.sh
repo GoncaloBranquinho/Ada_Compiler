@@ -89,7 +89,7 @@ done
 # Função para limpar arquivos de teste
 # ============================================================================
 clean_tests() {
-   echo -e "${YELLOW}Limpando ficheiros de teste (exceto .adb e .expected)...${NC}"
+   echo -e "${YELLOW}Limpando ficheiros de teste (exceto .adb, .expected e .input)...${NC}"
     if [ -d "$TEST_DIR" ]; then
         rm -f "$TEST_DIR"/*.bin
         rm -f "$TEST_DIR"/*.mips
@@ -195,7 +195,6 @@ run_test() {
 check_compiler() {
     if [ ! -f "$EXEC" ]; then
         echo -e "${RED}✗ Compilador não encontrado: $EXEC${NC}"
-        echo -e "${YELLOW}Compilar com: make -C src${NC}"
         exit 1
     fi
 }
@@ -236,7 +235,6 @@ check_compiler
 # Ler e executar testes dos ficheiros
 # ============================================================================
 
-# Teste individual se a flag -t foi passada
 
 if [ $# -gt 0 ]; then
     for arg in "$@"; do
@@ -271,7 +269,7 @@ else
       done
   else
       echo -e "${YELLOW}⚠ Nenhum ficheiro de teste encontrado em $TEST_DIR${NC}"
-      echo -e "${YELLOW}Cria ficheiros .ada e .expected em test_cases/{{NC}"
+      echo -e "${YELLOW}Cria ficheiros .adb, .expected (e .input se necessário) em test_cases/{{NC}"
       exit 1
   fi
 fi
