@@ -301,7 +301,7 @@ else
     done
     echo ""
     echo -e "${YELLOW}Ficheiros de teste disponíveis em:${NC} $TEST_DIR/"
-    echo -e "${YELLOW}Para debugar um teste:${NC}"
+    echo -e "${YELLOW}Para fazer debugging a um teste:${NC}"
     echo "  cat $TEST_DIR/test_XX_nome.adb                  # Ver código Ada"
     echo "  cat $TEST_DIR/test_XX_nomeAST.debugging         # Ver AST gerada"
     echo "  cat $TEST_DIR/test_XX_nomeTable.debugging       # Ver Tabela de Símbolos"
