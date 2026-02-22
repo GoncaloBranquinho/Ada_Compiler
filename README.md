@@ -67,59 +67,6 @@ end main;
 
 ---
 
-## Requirements
-
-- [GHC](https://www.haskell.org/ghc/) (≥ 9.x recommended)
-- [Alex](https://haskell-alex.readthedocs.io/) — lexer generator
-- [Happy](https://www.haskell.org/happy/) — parser generator
-
-Install via [GHCup](https://www.haskell.org/ghcup/):
-
-```bash
-ghcup install ghc
-cabal install alex happy
-```
-
----
-
-## Building
-
-```bash
-make
-```
-
-This will:
-1. Run `alex` on `Lexer.x` to generate `Lexer.hs`
-2. Run `happy` on `Parser.y` to generate `Parser.hs`
-3. Compile all modules with GHC into `bin/ada`
-
-To clean build artifacts:
-
-```bash
-make clean
-```
-
----
-
-## Usage
-
-```bash
-./bin/ada <source_file.ada>
-```
-
-This produces several output files in the same directory as the source:
-
-| Output | Description |
-|--------|-------------|
-| `<name>.mips` | Final MIPS assembly |
-| `<name>AST.debugging` | Parsed AST |
-| `<name>Table.debugging` | Symbol table and scope info |
-| `<name>IR.debugging` | Raw intermediate representation |
-| `<name>IROptimized.debugging` | IR after dead code elimination |
-| `<name>Allocation.debugging` | Register allocation map |
-
----
-
 ## Compilation Pipeline
 
 ```
@@ -180,7 +127,5 @@ The generated assembly includes the following built-in subroutines:
 - No support for functions or procedures beyond `main`
 - No pointer or array types
 - Integer and float types are 32-bit only
-- Liveness analysis operates on a single flat block (no inter-procedural analysis)
-- Available expression analysis is present in the codebase but currently commented out
 
 ---
