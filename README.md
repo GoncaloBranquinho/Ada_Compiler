@@ -97,7 +97,7 @@ IR Analysis           — collect variable/literal info per scope
 Memory Allocation     — assign registers or stack slots
     │
     ▼
-Code Generation       — emit MIPS32 assembly
+Code Generation       — emit MIPS assembly
 ```
 
 ---
